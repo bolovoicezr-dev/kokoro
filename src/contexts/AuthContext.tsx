@@ -50,7 +50,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for stored user session
     const storedUser = localStorage.getItem('kokoroUser');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsed = JSON.parse(storedUser);
+      const isAdminEmail = typeof parsed?.email === 'string' && parsed.email.toLowerCase() === 'tafser.yeamin.tiu@gmail.com';
+      const normalizedUser = {
+        ...parsed,
+        role: isAdminEmail ? 'admin' : parsed.role,
+      };
+      setUser(normalizedUser);
+      // Persist normalized role if it changed
+      localStorage.setItem('kokoroUser', JSON.stringify(normalizedUser));
     }
     setLoading(false);
   }, []);

@@ -36,7 +36,7 @@ export function Header() {
   const navItems = [
     { path: '/', icon: Home, label: t('home') },
     { path: '/dashboard', icon: Users, label: t('dashboard') },
-    ...(user?.role === 'admin' ? [{ path: '/admin', icon: Settings, label: t('admin') }] : []),
+    ...(user?.role === 'admin' ? [{ path: '/admin', icon: Settings, label: `${t('admin')} 🔧` }] : []),
   ];
 
   return (

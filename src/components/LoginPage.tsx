@@ -144,8 +144,13 @@ export function LoginPage() {
           <div className="mt-8 p-4 bg-sky-50 rounded-xl">
             <h3 className="font-semibold text-gray-900 mb-2">デモアカウント</h3>
             <div className="text-sm text-gray-600 space-y-1">
-              <p><strong>管理者:</strong> admin@kokoro.com / admin123</p>
+              <p><strong>管理者:</strong> admin@kokoro.com / admin123 <span className="text-sky-600">(管理パネルアクセス可能)</span></p>
               <p><strong>ユーザー:</strong> user@example.com / user123</p>
+            </div>
+            <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 管理者アカウントでログインすると、音声管理やシステム設定にアクセスできます
+              </p>
             </div>
           </div>
         </div>

@@ -35,7 +35,7 @@ const translations = {
     // Navigation
     home: "ホーム",
     dashboard: "Yujin",
-    admin: "管理者",
+    admin: "管理パネル",
     language: "言語",
     // Dashboard
     myPartners: "あなたのKokoro",

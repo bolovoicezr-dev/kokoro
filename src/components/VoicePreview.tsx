@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Upload, Volume2 } from 'lucide-react';
+import { Play, Pause, Upload, Volume2, CheckCircle } from 'lucide-react';
 
 interface VoicePreviewProps {
   voiceId: string;
@@ -11,6 +11,7 @@ export function VoicePreview({ voiceId, voiceName, onAudioUpload }: VoicePreview
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -22,27 +23,40 @@ export function VoicePreview({ voiceId, voiceName, onAudioUpload }: VoicePreview
     }
   }, [voiceId]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('audio/')) {
+      setIsUploading(true);
       setUploadedFile(file);
       const url = URL.createObjectURL(file);
       setAudioUrl(url);
       
-      // Store in localStorage for persistence
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) {
-          localStorage.setItem(`voice-preview-${voiceId}`, reader.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      // Simulate upload delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (onAudioUpload) {
-        onAudioUpload(voiceId, file);
+      try {
+        // Store in localStorage for persistence
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (reader.result) {
+            localStorage.setItem(`voice-preview-${voiceId}`, reader.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+        
+        if (onAudioUpload) {
+          onAudioUpload(voiceId, file);
+        }
+      } catch (error) {
+        console.error('Upload failed:', error);
+      } finally {
+        setIsUploading(false);
       }
+    } else {
+      alert('音声ファイルを選択してください（MP3, WAV, M4A等）');
     }
   };
+      
 
   const togglePlayback = () => {
     if (!audioRef.current || !audioUrl) return;
@@ -61,7 +75,7 @@ export function VoicePreview({ voiceId, voiceName, onAudioUpload }: VoicePreview
   };
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center space-x-2 min-w-0">
       {audioUrl && (
         <audio
           ref={audioRef}
@@ -72,17 +86,20 @@ export function VoicePreview({ voiceId, voiceName, onAudioUpload }: VoicePreview
       )}
       
       {audioUrl ? (
-        <button
-          onClick={togglePlayback}
-          className="p-2 bg-sky-100 hover:bg-sky-200 rounded-full transition-colors"
-          title={`${voiceName}の音声を${isPlaying ? '停止' : '再生'}`}
-        >
-          {isPlaying ? (
-            <Pause className="w-4 h-4 text-sky-600" />
-          ) : (
-            <Play className="w-4 h-4 text-sky-600" />
-          )}
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={togglePlayback}
+            className="p-2 bg-sky-100 hover:bg-sky-200 rounded-full transition-colors"
+            title={`${voiceName}の音声を${isPlaying ? '停止' : '再生'}`}
+          >
+            {isPlaying ? (
+              <Pause className="w-4 h-4 text-sky-600" />
+            ) : (
+              <Play className="w-4 h-4 text-sky-600" />
+            )}
+          </button>
+          <CheckCircle className="w-4 h-4 text-green-500" title="音声プレビューあり" />
+        </div>
       ) : (
         <div className="flex items-center space-x-1">
           <input
@@ -92,15 +109,24 @@ export function VoicePreview({ voiceId, voiceName, onAudioUpload }: VoicePreview
             onChange={handleFileUpload}
             className="hidden"
             id={`audio-upload-${voiceId}`}
+            disabled={isUploading}
           />
           <label
             htmlFor={`audio-upload-${voiceId}`}
-            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
+            className={`p-2 rounded-full transition-colors cursor-pointer ${
+              isUploading 
+                ? 'bg-sky-100 cursor-not-allowed' 
+                : 'bg-gray-100 hover:bg-sky-200'
+            }`}
             title={`${voiceName}の音声をアップロード`}
           >
-            <Upload className="w-4 h-4 text-gray-600" />
+            {isUploading ? (
+              <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 text-gray-600" />
+            )}
           </label>
-          <Volume2 className="w-4 h-4 text-gray-400" />
+          <Volume2 className="w-4 h-4 text-gray-400" title="音声プレビューなし" />
         </div>
       )}
     </div>

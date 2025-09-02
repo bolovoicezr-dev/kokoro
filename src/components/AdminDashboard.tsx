@@ -28,7 +28,7 @@ function KokoroHeroLogo() {
   );
 }
 
-export function LandingPage() {
+export function AdminDashboard() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
 

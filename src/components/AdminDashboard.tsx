@@ -39,15 +39,6 @@ export function LandingPage() {
       description: t('uploadImageDesc'),
     },
     {
-  // Load saved API key on component mount
-  React.useEffect(() => {
-    const savedApiKey = localStorage.getItem('retellApiKey');
-    if (savedApiKey) {
-      setRetellApiKey(savedApiKey);
-    }
-  }, []);
-      // Clean up stored audio preview
-      localStorage.removeItem(`voice-preview-${voiceId}`);
       icon: Mic,
       title: t('chooseVoice'),
       description: t('chooseVoiceDesc'),
@@ -55,15 +46,6 @@ export function LandingPage() {
     {
       icon: Heart,
       title: t('chooseRelation'),
-    // Store the audio file reference for the voice
-    setVoices(prev => prev.map(voice => 
-      voice.id === voiceId 
-        ? { ...voice, previewUrl: URL.createObjectURL(file) }
-        : voice
-    ));
-    
-    // In a real app, this would upload to a server
-    console.log(`Audio uploaded for voice ${voiceId}:`, file.name);
       description: t('chooseRelationDesc'),
     },
     {

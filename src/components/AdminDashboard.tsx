@@ -64,8 +64,9 @@ export function LandingPage() {
     
     // In a real app, this would upload to a server
     console.log(`Audio uploaded for voice ${voiceId}:`, file.name);
+      description: t('chooseRelationDesc'),
+    },
     {
-
       icon: Phone,
       title: t('startTalking'),
       description: t('startTalkingDesc'),
@@ -101,20 +102,17 @@ export function LandingPage() {
                 className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-lg font-semibold rounded-full hover:from-sky-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 {t('getStarted')}
-                        Retell API Key
+                <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
-                      <p className="text-sm text-gray-500 mb-3">
-                        Retell AIのAPIキーを設定してください。このキーは音声通話機能に必要です。
-                      </p>
             </div>
 
             {/* Demo Placeholder */}
             <div className="relative">
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl">
-                          placeholder="Retell APIキーを入力"
+                <div className="text-center">
                   <Heart className="w-16 h-16 text-sky-400 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    Retell AI設定
+                    音声デモ
                   </h3>
                   <p className="text-gray-600 mb-6">
                     管理者が音声デモを追加すると、ここに表示されます
@@ -122,28 +120,7 @@ export function LandingPage() {
                   <div className="bg-sky-50 rounded-xl p-4">
                     <p className="text-sm text-sky-700">
                       リアルな音声でまるで本当の人と話しているような体験をお楽しみください
-                      {retellApiKey && (
-                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <p className="text-green-700 text-sm">✓ APIキーが設定されています</p>
-                        </div>
-                      )}
                     </p>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    システム情報
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <h4 className="font-medium text-gray-900 mb-2">登録済み音声</h4>
-                      <p className="text-2xl font-bold text-sky-600">{voices.length}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <h4 className="font-medium text-gray-900 mb-2">関係性タイプ</h4>
-                      <p className="text-2xl font-bold text-blue-600">{relationshipTypes.length}</p>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -171,9 +148,6 @@ export function LandingPage() {
             </div>
             
             <div className="bg-white p-8 rounded-2xl shadow-lg">
-                  <div className="text-sm text-gray-600 mb-4">
-                    各音声にプレビューファイルをアップロードできます。ユーザーは作成時にこれらの音声を聞いて選択できます。
-                  </div>
               <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 話す相手がいない
@@ -204,90 +178,14 @@ export function LandingPage() {
           </h2>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                            title="音声を編集"
             {features.map((feature, index) => (
               <div key={index} className="text-center group">
                 <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-sky-100 to-blue-100 rounded-full mb-6 group-hover:from-sky-200 group-hover:to-blue-200 transition-all duration-200">
                   <feature.icon className="w-10 h-10 text-sky-600" />
-                  <div className="text-sm text-gray-500">
-                    音声プレビューをアップロードして、ユーザーが選択前に聞けるようにしましょう
-                            title="音声を削除"
-                  </div>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
                   {feature.title}
                 </h3>
-                      
-                      {/* Voice Edit Form */}
-                      {editingVoice === voice.id && (
-                        <div className="mt-6 pt-6 border-t border-gray-200">
-                          <h5 className="font-medium text-gray-900 mb-4">音声を編集</h5>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <input
-                              type="text"
-                              placeholder="英語名"
-                              defaultValue={voice.name}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                            />
-                            <input
-                              type="text"
-                              placeholder="日本語名"
-                              defaultValue={voice.nameJa}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                            />
-                            <select
-                              defaultValue={voice.gender}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                            >
-                              <option value="female">女性</option>
-                              <option value="male">男性</option>
-                            </select>
-                            <input
-                              type="text"
-                              placeholder="年齢範囲"
-                              defaultValue={voice.ageRange}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Retell Voice ID"
-                              defaultValue={voice.retellVoiceId || ''}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                            />
-                            <div></div>
-                            <textarea
-                              placeholder="性格 (英語)"
-                              defaultValue={voice.personality}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                              rows={2}
-                            />
-                            <textarea
-                              placeholder="性格 (日本語)"
-                              defaultValue={voice.personalityJa}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                              rows={2}
-                            />
-                          </div>
-                          <div className="flex space-x-3 mt-4">
-                            <button
-                              onClick={() => {
-                                alert('編集機能は開発中です');
-                                setEditingVoice(null);
-                              }}
-                              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition-all"
-                            >
-                              <Save className="w-4 h-4 mr-2" />
-                              保存
-                            </button>
-                            <button
-                              onClick={() => setEditingVoice(null)}
-                              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
-                            >
-                              キャンセル
-                            </button>
-                          </div>
-                        </div>
-                      )}
                 <p className="text-gray-600 leading-relaxed">
                   {feature.description}
                 </p>
@@ -337,14 +235,12 @@ export function LandingPage() {
           </div>
         </div>
       </section>
-                            title="関係性を編集"
 
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-r from-sky-500 to-blue-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
             今日から新しい人生を始めませんか？
-                            title="関係性を削除"
           </h2>
           <p className="text-xl text-white/90 mb-8">
             あなたの理想のKokoroを作って、心温まる会話を始めましょう

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Settings } from 'lucide-react';
+import { Home, Users, Settings, LogOut } from 'lucide-react';
 import { LanguageToggle } from './LanguageToggle';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // Heart logo with voice waves
 function KokoroHeartLogo() {
@@ -30,11 +31,12 @@ function KokoroHeartLogo() {
 export function Header() {
   const location = useLocation();
   const { t } = useLanguage();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { path: '/', icon: Home, label: t('home') },
     { path: '/dashboard', icon: Users, label: t('dashboard') },
-    { path: '/admin', icon: Settings, label: t('admin') },
+    ...(user?.role === 'admin' ? [{ path: '/admin', icon: Settings, label: t('admin') }] : []),
   ];
 
   return (
@@ -63,7 +65,23 @@ export function Header() {
             ))}
           </nav>
 
-          <LanguageToggle />
+          <div className="flex items-center space-x-4">
+            <LanguageToggle />
+            {user && (
+              <div className="flex items-center space-x-3">
+                <span className="text-white/80 text-sm hidden sm:block">
+                  {user.name}
+                </span>
+                <button
+                  onClick={logout}
+                  className="flex items-center space-x-1 px-3 py-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:block">ログアウト</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

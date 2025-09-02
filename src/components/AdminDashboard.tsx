@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Settings, Plus, Edit, Trash2, Play, Save, Mic, Volume2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { voices as initialVoices, relationshipTypes as initialRelationshipTypes } from '../data/voices';
+import { VoicePreview } from './VoicePreview';
 
 export function AdminDashboard() {
   const { t, language } = useLanguage();
@@ -30,6 +31,10 @@ export function AdminDashboard() {
     alert('APIキーが正常に保存されました');
   };
 
+  const handleVoiceAudioUpload = (voiceId: string, file: File) => {
+    console.log(`Audio uploaded for voice ${voiceId}:`, file.name);
+    // In a real app, this would upload to a server
+  };
   const tabs = [
     { id: 'settings', label: 'AI設定', icon: Settings },
     { id: 'voices', label: '音声管理', icon: Volume2 },
@@ -248,12 +253,11 @@ export function AdminDashboard() {
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          <button 
-                            onClick={() => alert('音声プレビュー機能は開発中です')}
-                            className="p-2 text-gray-600 hover:text-sky-600 transition-colors"
-                          >
-                            <Play className="w-4 h-4" />
-                          </button>
+                          <VoicePreview
+                            voiceId={voice.id}
+                            voiceName={voice.nameJa}
+                            onAudioUpload={handleVoiceAudioUpload}
+                          />
                           <button 
                             onClick={() => setEditingVoice(voice.id)}
                             className="p-2 text-gray-600 hover:text-blue-600 transition-colors"

@@ -4,6 +4,7 @@ import { Upload, Play, Pause, ArrowLeft, Heart } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useApi } from '../hooks/useApi';
 import { voices, relationshipTypes } from '../data/voices';
+import { VoicePreview } from './VoicePreview';
 
 const predefinedCharacteristics = [
   { id: 'gentle', label: '優しい', labelEn: 'Gentle' },
@@ -43,7 +44,6 @@ export function CreatePartner() {
   const [selectedCharacteristics, setSelectedCharacteristics] = useState<string[]>([]);
   const [customCharacteristics, setCustomCharacteristics] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,14 +62,6 @@ export function CreatePartner() {
     );
   };
 
-  const playVoicePreview = (voiceId: string) => {
-    if (playingVoice === voiceId) {
-      setPlayingVoice(null);
-    } else {
-      setPlayingVoice(voiceId);
-      setTimeout(() => setPlayingVoice(null), 3000);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,20 +231,10 @@ export function CreatePartner() {
                         </p>
                         <span className="text-xs text-gray-500">{voice.ageRange}歳 • {voice.gender === 'female' ? '女性' : '男性'}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          playVoicePreview(voice.id);
-                        }}
-                        className="p-2 bg-sky-100 hover:bg-sky-200 rounded-full transition-colors"
-                      >
-                        {playingVoice === voice.id ? (
-                          <Pause className="w-4 h-4 text-sky-600" />
-                        ) : (
-                          <Play className="w-4 h-4 text-sky-600" />
-                        )}
-                      </button>
+                      <VoicePreview
+                        voiceId={voice.id}
+                        voiceName={voice.nameJa}
+                      />
                     </div>
                   </label>
                 ))}

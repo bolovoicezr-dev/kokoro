@@ -33,6 +33,13 @@ const mockUsers = [
     name: 'Regular User',
     role: 'user' as const,
   },
+  {
+    id: '3',
+    email: 'tafser.yeamin.tiu@gmail.com',
+    password: '77Graminphone',
+    name: 'Admin (Tafser Yeamin)',
+    role: 'admin' as const,
+  },
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -57,11 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const foundUser = mockUsers.find(u => u.email === email && u.password === password);
     
     if (foundUser) {
+      const isAdminEmail = foundUser.email.toLowerCase() === 'tafser.yeamin.tiu@gmail.com';
       const userData = {
         id: foundUser.id,
         email: foundUser.email,
         name: foundUser.name,
-        role: foundUser.role,
+        role: (isAdminEmail ? 'admin' : foundUser.role) as 'admin' | 'user',
       };
       setUser(userData);
       localStorage.setItem('kokoroUser', JSON.stringify(userData));
@@ -87,12 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     // Create new user
+    const isAdminEmail = email.toLowerCase() === 'tafser.yeamin.tiu@gmail.com';
     const newUser = {
       id: Date.now().toString(),
       email,
       password,
       name,
-      role: 'user' as const,
+      role: (isAdminEmail ? 'admin' : 'user') as const,
     };
     
     mockUsers.push(newUser);

@@ -67,7 +67,7 @@ export function Header() {
 
           <div className="flex items-center space-x-4">
             <LanguageToggle />
-            {user && (
+            {user ? (
               <div className="flex items-center space-x-3">
                 <span className="text-white/80 text-sm hidden sm:block">
                   {user.name}
@@ -79,6 +79,21 @@ export function Header() {
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:block">ログアウト</span>
                 </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link
+                  to="/login"
+                  className="px-3 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-md text-sm font-medium transition-colors"
+                >
+                  ログイン
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-3 py-2 bg-white text-sky-600 hover:bg-white/90 rounded-md text-sm font-semibold transition-colors"
+                >
+                  新規登録
+                </Link>
               </div>
             )}
           </div>

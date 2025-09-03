@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Upload, Mic, Phone, Star, Users, Heart, MessageCircle, Clock, Zap } from 'lucide-react';
+import { ArrowRight, Upload, Mic, Phone, Star, Users, Heart, MessageCircle, Clock, Zap, Play, Pause } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // Heart logo with voice waves for landing page

@@ -2,10 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Clock, MessageCircle, Heart } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { relationshipTypes } from '../data/voices';
+import { getRelationshipTypes } from '../data/voices';
 
 export function Dashboard() {
   const { t, language } = useLanguage();
+  const relationshipTypes = getRelationshipTypes();
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat(language === 'ja' ? 'ja-JP' : 'en-US', {
@@ -21,8 +22,8 @@ export function Dashboard() {
     return relation ? (language === 'ja' ? relation.label : relation.labelEn) : relationshipType;
   };
 
-  // Empty state since we removed mock data
-  const partners: any[] = [];
+  // Load created partners from localStorage
+  const partners = JSON.parse(localStorage.getItem('createdPartners') || '[]');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 py-8">

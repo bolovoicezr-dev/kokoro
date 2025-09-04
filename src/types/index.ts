@@ -39,6 +39,7 @@ export interface CreatePartnerRequest {
   characteristics: string;
   characteristicsJa: string;
   relationshipType: string;
+  userCallName: string;
 }
 
 export interface ApiResponse<T> {

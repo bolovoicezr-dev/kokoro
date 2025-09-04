@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Upload, Mic, Phone, Star, Users, Heart, MessageCircle, Clock, Zap, Play, Pause } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getDemoVoices } from '../data/voices';
 
 // Heart logo with voice waves for landing page
 function KokoroHeroLogo() {
@@ -29,6 +30,30 @@ function KokoroHeroLogo() {
 
 export function LandingPage() {
   const { t, language } = useLanguage();
+  const [demoVoices, setDemoVoices] = useState<any[]>([]);
+  const [currentPlaying, setCurrentPlaying] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDemoVoices(getDemoVoices());
+  }, []);
+
+  const toggleAudio = (voiceId: string) => {
+    const audio = document.getElementById(`demo-audio-${voiceId}`) as HTMLAudioElement;
+    if (!audio) return;
+
+    if (currentPlaying === voiceId) {
+      audio.pause();
+      setCurrentPlaying(null);
+    } else {
+      // Pause any currently playing audio
+      if (currentPlaying) {
+        const currentAudio = document.getElementById(`demo-audio-${currentPlaying}`) as HTMLAudioElement;
+        if (currentAudio) currentAudio.pause();
+      }
+      audio.play();
+      setCurrentPlaying(voiceId);
+    }
+  };
 
   const features = [
     {
@@ -89,20 +114,57 @@ export function LandingPage() {
             {/* Demo Placeholder */}
             <div className="relative">
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl">
-                <div className="text-center py-12">
-                  <Heart className="w-16 h-16 text-sky-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    会話デモ
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    管理者が音声デモを追加すると、ここに表示されます
-                  </p>
-                  <div className="bg-sky-50 rounded-xl p-4">
-                    <p className="text-sm text-sky-700">
-                      リアルな音声でまるで本当の人と話しているような体験をお楽しみください
-                    </p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+                  会話デモ
+                </h3>
+                
+                {demoVoices.length > 0 ? (
+                  <div className="space-y-4">
+                    {demoVoices.map((voice) => (
+                      <div key={voice.id} className="flex items-center justify-between p-4 bg-sky-50 rounded-xl">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{voice.name}</h4>
+                          <p className="text-sm text-gray-600">音声サンプル</p>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => toggleAudio(voice.id)}
+                            className="p-3 bg-sky-500 hover:bg-sky-600 text-white rounded-full transition-colors"
+                          >
+                            {currentPlaying === voice.id ? (
+                              <Pause className="w-5 h-5" />
+                            ) : (
+                              <Play className="w-5 h-5" />
+                            )}
+                          </button>
+                          <audio
+                            id={`demo-audio-${voice.id}`}
+                            src={voice.audioUrl}
+                            onEnded={() => setCurrentPlaying(null)}
+                            onPause={() => setCurrentPlaying(null)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <div className="text-center mt-6">
+                      <p className="text-sm text-sky-700">
+                        リアルな音声でまるで本当の人と話しているような体験をお楽しみください
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Heart className="w-16 h-16 text-sky-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-6">
+                      管理者が音声デモを追加すると、ここに表示されます
+                    </p>
+                    <div className="bg-sky-50 rounded-xl p-4">
+                      <p className="text-sm text-sky-700">
+                        リアルな音声でまるで本当の人と話しているような体験をお楽しみください
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

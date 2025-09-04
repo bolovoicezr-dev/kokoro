@@ -1,21 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Play, Pause, ArrowLeft, Heart } from 'lucide-react';
+import { Upload, ArrowLeft, Heart, User } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useApi } from '../hooks/useApi';
-import { voices, relationshipTypes } from '../data/voices';
+import { getVoices, getRelationshipTypes, getCharacteristics } from '../data/voices';
 import { VoicePreview } from './VoicePreview';
-
-const predefinedCharacteristics = [
-  { id: 'gentle', label: '優しい', labelEn: 'Gentle' },
-  { id: 'cheerful', label: '明るい', labelEn: 'Cheerful' },
-  { id: 'calm', label: '落ち着いた', labelEn: 'Calm' },
-  { id: 'supportive', label: '支援的', labelEn: 'Supportive' },
-  { id: 'playful', label: '遊び心がある', labelEn: 'Playful' },
-  { id: 'wise', label: '賢い', labelEn: 'Wise' },
-  { id: 'caring', label: '思いやりがある', labelEn: 'Caring' },
-  { id: 'funny', label: '面白い', labelEn: 'Funny' },
-];
 
 function KokoroHeartCreateLogo() {
   return (
@@ -31,10 +21,16 @@ function KokoroHeartCreateLogo() {
 export function CreatePartner() {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const { createPartner, loading, error } = useApi();
+  
+  const [voices, setVoices] = useState<any[]>([]);
+  const [relationshipTypes, setRelationshipTypes] = useState<any[]>([]);
+  const [characteristics, setCharacteristics] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
+    userCallName: '',
     characteristics: '',
     voiceId: '',
     relationshipType: '',
@@ -44,6 +40,13 @@ export function CreatePartner() {
   const [selectedCharacteristics, setSelectedCharacteristics] = useState<string[]>([]);
   const [customCharacteristics, setCustomCharacteristics] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string>('');
+
+  // Load admin-managed data
+  useEffect(() => {
+    setVoices(getVoices());
+    setRelationshipTypes(getRelationshipTypes());
+    setCharacteristics(getCharacteristics());
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,16 +65,15 @@ export function CreatePartner() {
     );
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.voiceId || !formData.relationshipType || !formData.image) {
+    if (!formData.name || !formData.userCallName || !formData.voiceId || !formData.relationshipType || !formData.image) {
       return;
     }
 
     const selectedChars = selectedCharacteristics.map(id => 
-      predefinedCharacteristics.find(char => char.id === id)
+      characteristics.find(char => char.id === id)
     ).filter(Boolean);
 
     const characteristicsText = [
@@ -81,6 +83,7 @@ export function CreatePartner() {
 
     const result = await createPartner({
       name: formData.name,
+      userCallName: formData.userCallName,
       image: formData.image,
       voiceId: formData.voiceId,
       relationshipType: formData.relationshipType,
@@ -89,9 +92,50 @@ export function CreatePartner() {
     });
 
     if (result.success) {
+      // Store partner locally for admin viewing
+      const newPartner = {
+        id: Date.now().toString(),
+        userId: user?.id,
+        userName: user?.name,
+        name: formData.name,
+        userCallName: formData.userCallName,
+        voiceId: formData.voiceId,
+        relationshipType: formData.relationshipType,
+        characteristics: characteristicsText,
+        imageUrl: previewUrl,
+        agentId: result.data?.agentId,
+        createdAt: new Date(),
+      };
+      
+      const existingPartners = JSON.parse(localStorage.getItem('createdPartners') || '[]');
+      localStorage.setItem('createdPartners', JSON.stringify([...existingPartners, newPartner]));
+      
       navigate('/dashboard');
     }
   };
+
+  if (voices.length === 0 || relationshipTypes.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 py-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 text-center">
+            <Heart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">設定が必要です</h2>
+            <p className="text-gray-600 mb-6">
+              管理者が音声と関係性を設定する必要があります。<br />
+              管理者にお問い合わせください。
+            </p>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white rounded-full transition-colors"
+            >
+              ダッシュボードに戻る
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 py-8">
@@ -112,31 +156,52 @@ export function CreatePartner() {
               <KokoroHeartCreateLogo />
             </div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {t('createPartner')}
+              新しいKokoroを作成
             </h1>
             <p className="text-gray-600 mt-2">あなたの理想のKokoroを作りましょう</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Name Input */}
+            {/* Partner Name Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                {t('partnerName')}
+                Kokoroの名前
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder={t('partnerNamePlaceholder')}
+                placeholder="Kokoroの名前を入力"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
                 required
               />
             </div>
 
+            {/* User Call Name Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                AIがあなたを呼ぶ名前
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={formData.userCallName}
+                  onChange={(e) => setFormData({ ...formData, userCallName: e.target.value })}
+                  placeholder="太郎、さくら、など"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Kokoroがあなたを呼ぶときに使う名前です
+              </p>
+            </div>
+
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                {t('uploadPhoto')}
+                写真をアップロード
               </label>
               <div className="relative">
                 <input
@@ -170,7 +235,7 @@ export function CreatePartner() {
             {/* Relationship Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                {t('selectRelationship')}
+                関係性を選択
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {relationshipTypes.map((relation) => (
@@ -191,7 +256,7 @@ export function CreatePartner() {
                       className="sr-only"
                     />
                     <span className="text-sm font-medium">
-                      {t(relation.id)}
+                      {language === 'ja' ? relation.label : relation.labelEn}
                     </span>
                   </label>
                 ))}
@@ -201,7 +266,7 @@ export function CreatePartner() {
             {/* Voice Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                {t('selectVoice')}
+                音声を選択
               </label>
               <div className="space-y-3">
                 {voices.map((voice) => (
@@ -244,10 +309,10 @@ export function CreatePartner() {
             {/* Characteristics Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                {t('characteristics')}
+                特徴
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                {predefinedCharacteristics.map((char) => (
+                {characteristics.map((char) => (
                   <label
                     key={char.id}
                     className={`relative flex items-center justify-center p-3 border rounded-xl cursor-pointer transition-all ${
@@ -271,7 +336,7 @@ export function CreatePartner() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('customCharacteristics')}
+                  カスタム特徴
                 </label>
                 <textarea
                   value={customCharacteristics}
@@ -298,7 +363,7 @@ export function CreatePartner() {
                   : 'bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 transform hover:scale-105 shadow-lg hover:shadow-xl'
               }`}
             >
-              {loading ? '作成中...' : t('create')}
+              {loading ? '作成中...' : '作成'}
             </button>
           </form>
         </div>

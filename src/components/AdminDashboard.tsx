@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Users, Mic, Activity, Plus, Edit2, Trash2, Save, X, Play, Pause, Eye, EyeOff } from 'lucide-react';
+import { Settings, Users, Mic, Activity, Plus, Edit2, Trash2, Save, X, Play, Pause, Eye, EyeOff, UserPlus, Heart } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { voices, relationshipTypes } from '../data/voices';
 import { VoicePreview } from './VoicePreview';
 
 interface Member {
@@ -31,6 +30,28 @@ interface DemoVoice {
   isSelected: boolean;
 }
 
+interface Voice {
+  id: string;
+  name: string;
+  nameJa: string;
+  gender: 'male' | 'female';
+  ageRange: string;
+  personality: string;
+  personalityJa: string;
+}
+
+interface RelationshipType {
+  id: string;
+  label: string;
+  labelEn: string;
+}
+
+interface Characteristic {
+  id: string;
+  label: string;
+  labelEn: string;
+}
+
 export function AdminDashboard() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
@@ -41,93 +62,154 @@ export function AdminDashboard() {
   const [apiKeyStatus, setApiKeyStatus] = useState<'connected' | 'disconnected' | 'testing'>('disconnected');
   
   // Voice Management
+  const [voices, setVoices] = useState<Voice[]>([]);
   const [editingVoice, setEditingVoice] = useState<string | null>(null);
   const [newVoice, setNewVoice] = useState({ name: '', nameJa: '', personality: '', personalityJa: '', gender: 'female', ageRange: '' });
   const [showAddVoice, setShowAddVoice] = useState(false);
   
   // Relationship Management
+  const [relationshipTypes, setRelationshipTypes] = useState<RelationshipType[]>([]);
   const [editingRelation, setEditingRelation] = useState<string | null>(null);
   const [newRelation, setNewRelation] = useState({ label: '', labelEn: '' });
   const [showAddRelation, setShowAddRelation] = useState(false);
+  
+  // Characteristics Management
+  const [characteristics, setCharacteristics] = useState<Characteristic[]>([]);
+  const [editingCharacteristic, setEditingCharacteristic] = useState<string | null>(null);
+  const [newCharacteristic, setNewCharacteristic] = useState({ label: '', labelEn: '' });
+  const [showAddCharacteristic, setShowAddCharacteristic] = useState(false);
   
   // Demo Voice Management
   const [demoVoices, setDemoVoices] = useState<DemoVoice[]>([]);
   const [selectedDemoCount, setSelectedDemoCount] = useState(0);
   
   // Member Management
-  const [members, setMembers] = useState<Member[]>([
-    {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@kokoro.com',
-      role: 'admin',
-      createdAt: new Date('2024-01-15'),
-      lastLogin: new Date(),
-      partnersCount: 0
-    },
-    {
-      id: '2',
-      name: 'Regular User',
-      email: 'user@example.com',
-      role: 'user',
-      createdAt: new Date('2024-01-20'),
-      lastLogin: new Date('2024-01-22'),
-      partnersCount: 2
-    },
-    {
-      id: '3',
-      name: 'Tafser Yeamin',
-      email: 'tafser.yeamin.tiu@gmail.com',
-      role: 'admin',
-      createdAt: new Date('2024-01-10'),
-      lastLogin: new Date(),
-      partnersCount: 1
-    }
-  ]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMember, setNewMember] = useState({ name: '', email: '', password: '', role: 'user' });
+  
+  // Created Partners
+  const [createdPartners, setCreatedPartners] = useState<any[]>([]);
   
   // Logs
-  const [logs, setLogs] = useState<LogEntry[]>([
-    {
-      id: '1',
-      userId: '2',
-      userName: 'Regular User',
-      action: 'Partner Created',
-      timestamp: new Date('2024-01-22T10:30:00'),
-      details: 'Created partner "Yuki" with girlfriend relationship'
-    },
-    {
-      id: '2',
-      userId: '2',
-      userName: 'Regular User',
-      action: 'Voice Call',
-      timestamp: new Date('2024-01-22T14:15:00'),
-      details: 'Started call with partner "Yuki" - Duration: 15 minutes'
-    },
-    {
-      id: '3',
-      userId: '3',
-      userName: 'Tafser Yeamin',
-      action: 'Admin Login',
-      timestamp: new Date(),
-      details: 'Admin accessed dashboard'
-    }
-  ]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   
   const [activeTab, setActiveTab] = useState('api');
 
   // Load saved data on mount
   useEffect(() => {
+    // Load API key
     const savedApiKey = localStorage.getItem('retellApiKey');
     if (savedApiKey) {
       setRetellApiKey(savedApiKey);
       setApiKeyStatus('connected');
     }
     
+    // Load voices
+    const savedVoices = localStorage.getItem('adminVoices');
+    if (savedVoices) {
+      setVoices(JSON.parse(savedVoices));
+    }
+    
+    // Load relationship types
+    const savedRelationships = localStorage.getItem('adminRelationships');
+    if (savedRelationships) {
+      setRelationshipTypes(JSON.parse(savedRelationships));
+    }
+    
+    // Load characteristics
+    const savedCharacteristics = localStorage.getItem('adminCharacteristics');
+    if (savedCharacteristics) {
+      setCharacteristics(JSON.parse(savedCharacteristics));
+    }
+    
+    // Load demo voices
     const savedDemoVoices = localStorage.getItem('demoVoices');
     if (savedDemoVoices) {
       const parsed = JSON.parse(savedDemoVoices);
       setDemoVoices(parsed);
       setSelectedDemoCount(parsed.filter((v: DemoVoice) => v.isSelected).length);
+    }
+    
+    // Load members
+    const savedMembers = localStorage.getItem('adminMembers');
+    if (savedMembers) {
+      setMembers(JSON.parse(savedMembers));
+    } else {
+      // Initialize with default members
+      const defaultMembers = [
+        {
+          id: '1',
+          name: 'Admin User',
+          email: 'admin@kokoro.com',
+          role: 'admin' as const,
+          createdAt: new Date('2024-01-15'),
+          lastLogin: new Date(),
+          partnersCount: 0
+        },
+        {
+          id: '2',
+          name: 'Regular User',
+          email: 'user@example.com',
+          role: 'user' as const,
+          createdAt: new Date('2024-01-20'),
+          lastLogin: new Date('2024-01-22'),
+          partnersCount: 2
+        },
+        {
+          id: '3',
+          name: 'Tafser Yeamin',
+          email: 'tafser.yeamin.tiu@gmail.com',
+          role: 'admin' as const,
+          createdAt: new Date('2024-01-10'),
+          lastLogin: new Date(),
+          partnersCount: 1
+        }
+      ];
+      setMembers(defaultMembers);
+      localStorage.setItem('adminMembers', JSON.stringify(defaultMembers));
+    }
+    
+    // Load created partners
+    const savedPartners = localStorage.getItem('createdPartners');
+    if (savedPartners) {
+      setCreatedPartners(JSON.parse(savedPartners));
+    }
+    
+    // Load logs
+    const savedLogs = localStorage.getItem('adminLogs');
+    if (savedLogs) {
+      setLogs(JSON.parse(savedLogs));
+    } else {
+      // Initialize with default logs
+      const defaultLogs = [
+        {
+          id: '1',
+          userId: '2',
+          userName: 'Regular User',
+          action: 'Partner Created',
+          timestamp: new Date('2024-01-22T10:30:00'),
+          details: 'Created partner "Yuki" with girlfriend relationship'
+        },
+        {
+          id: '2',
+          userId: '2',
+          userName: 'Regular User',
+          action: 'Voice Call',
+          timestamp: new Date('2024-01-22T14:15:00'),
+          details: 'Started call with partner "Yuki" - Duration: 15 minutes'
+        },
+        {
+          id: '3',
+          userId: '3',
+          userName: 'Tafser Yeamin',
+          action: 'Admin Login',
+          timestamp: new Date(),
+          details: 'Admin accessed dashboard'
+        }
+      ];
+      setLogs(defaultLogs);
+      localStorage.setItem('adminLogs', JSON.stringify(defaultLogs));
     }
   }, []);
 
@@ -141,6 +223,80 @@ export function AdminDashboard() {
     localStorage.setItem('retellApiKey', retellApiKey);
   };
 
+  // Voice Management Functions
+  const addVoice = () => {
+    if (!newVoice.name || !newVoice.nameJa || !newVoice.personality || !newVoice.personalityJa || !newVoice.ageRange) return;
+    
+    const voice: Voice = {
+      id: Date.now().toString(),
+      ...newVoice,
+      gender: newVoice.gender as 'male' | 'female',
+    };
+    
+    const updatedVoices = [...voices, voice];
+    setVoices(updatedVoices);
+    localStorage.setItem('adminVoices', JSON.stringify(updatedVoices));
+    setNewVoice({ name: '', nameJa: '', personality: '', personalityJa: '', gender: 'female', ageRange: '' });
+    setShowAddVoice(false);
+  };
+
+  const deleteVoice = (voiceId: string) => {
+    if (confirm('この音声を削除しますか？')) {
+      const updatedVoices = voices.filter(v => v.id !== voiceId);
+      setVoices(updatedVoices);
+      localStorage.setItem('adminVoices', JSON.stringify(updatedVoices));
+    }
+  };
+
+  // Relationship Management Functions
+  const addRelationship = () => {
+    if (!newRelation.label || !newRelation.labelEn) return;
+    
+    const relationship: RelationshipType = {
+      id: Date.now().toString(),
+      ...newRelation,
+    };
+    
+    const updatedRelationships = [...relationshipTypes, relationship];
+    setRelationshipTypes(updatedRelationships);
+    localStorage.setItem('adminRelationships', JSON.stringify(updatedRelationships));
+    setNewRelation({ label: '', labelEn: '' });
+    setShowAddRelation(false);
+  };
+
+  const deleteRelationship = (relationId: string) => {
+    if (confirm('この関係性を削除しますか？')) {
+      const updatedRelationships = relationshipTypes.filter(r => r.id !== relationId);
+      setRelationshipTypes(updatedRelationships);
+      localStorage.setItem('adminRelationships', JSON.stringify(updatedRelationships));
+    }
+  };
+
+  // Characteristics Management Functions
+  const addCharacteristic = () => {
+    if (!newCharacteristic.label || !newCharacteristic.labelEn) return;
+    
+    const characteristic: Characteristic = {
+      id: Date.now().toString(),
+      ...newCharacteristic,
+    };
+    
+    const updatedCharacteristics = [...characteristics, characteristic];
+    setCharacteristics(updatedCharacteristics);
+    localStorage.setItem('adminCharacteristics', JSON.stringify(updatedCharacteristics));
+    setNewCharacteristic({ label: '', labelEn: '' });
+    setShowAddCharacteristic(false);
+  };
+
+  const deleteCharacteristic = (charId: string) => {
+    if (confirm('この特徴を削除しますか？')) {
+      const updatedCharacteristics = characteristics.filter(c => c.id !== charId);
+      setCharacteristics(updatedCharacteristics);
+      localStorage.setItem('adminCharacteristics', JSON.stringify(updatedCharacteristics));
+    }
+  };
+
+  // Demo Voice Functions
   const handleDemoVoiceUpload = (file: File) => {
     const audioUrl = URL.createObjectURL(file);
     const newDemoVoice: DemoVoice = {
@@ -175,9 +331,40 @@ export function AdminDashboard() {
     localStorage.setItem('demoVoices', JSON.stringify(updatedVoices));
   };
 
+  const deleteDemoVoice = (voiceId: string) => {
+    if (confirm('このデモ音声を削除しますか？')) {
+      const updatedVoices = demoVoices.filter(v => v.id !== voiceId);
+      setDemoVoices(updatedVoices);
+      setSelectedDemoCount(updatedVoices.filter(v => v.isSelected).length);
+      localStorage.setItem('demoVoices', JSON.stringify(updatedVoices));
+    }
+  };
+
+  // Member Management Functions
+  const addMember = () => {
+    if (!newMember.name || !newMember.email || !newMember.password) return;
+    
+    const member: Member = {
+      id: Date.now().toString(),
+      name: newMember.name,
+      email: newMember.email,
+      role: newMember.role as 'user' | 'admin',
+      createdAt: new Date(),
+      partnersCount: 0
+    };
+    
+    const updatedMembers = [...members, member];
+    setMembers(updatedMembers);
+    localStorage.setItem('adminMembers', JSON.stringify(updatedMembers));
+    setNewMember({ name: '', email: '', password: '', role: 'user' });
+    setShowAddMember(false);
+  };
+
   const deleteMember = (memberId: string) => {
     if (confirm('このメンバーを削除しますか？')) {
-      setMembers(prev => prev.filter(m => m.id !== memberId));
+      const updatedMembers = members.filter(m => m.id !== memberId);
+      setMembers(updatedMembers);
+      localStorage.setItem('adminMembers', JSON.stringify(updatedMembers));
     }
   };
 
@@ -195,6 +382,7 @@ export function AdminDashboard() {
     { id: 'api', label: 'API設定', icon: Settings },
     { id: 'members', label: 'メンバー管理', icon: Users },
     { id: 'voices', label: '音声管理', icon: Mic },
+    { id: 'partners', label: '作成されたKokoro', icon: Heart },
     { id: 'logs', label: 'ログ', icon: Activity },
   ];
 
@@ -207,7 +395,7 @@ export function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 shadow-lg">
             <div className="flex items-center">
               <Users className="w-8 h-8 text-blue-500" />
@@ -224,6 +412,16 @@ export function AdminDashboard() {
               <div className="ml-4">
                 <p className="text-sm text-gray-600">登録音声数</p>
                 <p className="text-2xl font-bold text-gray-900">{voices.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <div className="flex items-center">
+              <Heart className="w-8 h-8 text-pink-500" />
+              <div className="ml-4">
+                <p className="text-sm text-gray-600">作成されたKokoro</p>
+                <p className="text-2xl font-bold text-gray-900">{createdPartners.length}</p>
               </div>
             </div>
           </div>
@@ -336,6 +534,7 @@ export function AdminDashboard() {
                     <li>• ユーザーが「通話開始」ボタンを押すとRetell AIに接続</li>
                     <li>• 選択された音声とキャラクター設定でリアルタイム会話</li>
                     <li>• 全ての通話ログは自動的に記録されます</li>
+                    <li>• WebhookからAgent IDが返され、通話に使用されます</li>
                   </ul>
                 </div>
               </div>
@@ -346,11 +545,71 @@ export function AdminDashboard() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-semibold text-gray-900">メンバー管理</h2>
-                  <button className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors">
+                  <button 
+                    onClick={() => setShowAddMember(true)}
+                    className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+                  >
                     <Plus className="w-4 h-4 mr-2 inline" />
                     新規メンバー追加
                   </button>
                 </div>
+
+                {/* Add Member Modal */}
+                {showAddMember && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">新規メンバー追加</h3>
+                      <button onClick={() => setShowAddMember(false)}>
+                        <X className="w-5 h-5 text-gray-400" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <input
+                        type="text"
+                        placeholder="名前"
+                        value={newMember.name}
+                        onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      />
+                      <input
+                        type="email"
+                        placeholder="メールアドレス"
+                        value={newMember.email}
+                        onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      />
+                      <input
+                        type="password"
+                        placeholder="パスワード"
+                        value={newMember.password}
+                        onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      />
+                      <select
+                        value={newMember.role}
+                        onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      >
+                        <option value="user">ユーザー</option>
+                        <option value="admin">管理者</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-end space-x-3 mt-4">
+                      <button
+                        onClick={() => setShowAddMember(false)}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        onClick={addMember}
+                        className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+                      >
+                        追加
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                   <div className="overflow-x-auto">
@@ -436,7 +695,7 @@ export function AdminDashboard() {
                     音声デモ管理 ({selectedDemoCount}/3選択中)
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    ランディングページの「音声デモ」セクションに表示される音声を管理します。最大3つまで選択可能です。
+                    ランディングページの「会話デモ」セクションに表示される音声を管理します。最大3つまで選択可能です。
                   </p>
                   
                   <div className="mb-4">
@@ -464,16 +723,24 @@ export function AdminDashboard() {
                       <div key={voice.id} className={`border rounded-lg p-4 ${voice.isSelected ? 'border-sky-500 bg-sky-50' : 'border-gray-200'}`}>
                         <div className="flex justify-between items-start mb-2">
                           <h4 className="font-medium text-gray-900">{voice.name}</h4>
-                          <button
-                            onClick={() => toggleDemoVoiceSelection(voice.id)}
-                            className={`px-3 py-1 text-xs rounded-full font-medium ${
-                              voice.isSelected 
-                                ? 'bg-sky-500 text-white' 
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
-                            {voice.isSelected ? '選択中' : '選択'}
-                          </button>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => toggleDemoVoiceSelection(voice.id)}
+                              className={`px-3 py-1 text-xs rounded-full font-medium ${
+                                voice.isSelected 
+                                  ? 'bg-sky-500 text-white' 
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                            >
+                              {voice.isSelected ? '選択中' : '選択'}
+                            </button>
+                            <button
+                              onClick={() => deleteDemoVoice(voice.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                         <audio controls className="w-full">
                           <source src={voice.audioUrl} />
@@ -482,6 +749,77 @@ export function AdminDashboard() {
                     ))}
                   </div>
                 </div>
+
+                {/* Add Voice Form */}
+                {showAddVoice && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">新しい音声追加</h3>
+                      <button onClick={() => setShowAddVoice(false)}>
+                        <X className="w-5 h-5 text-gray-400" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <input
+                        type="text"
+                        placeholder="英語名 (例: Yuki)"
+                        value={newVoice.name}
+                        onChange={(e) => setNewVoice({ ...newVoice, name: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="日本語名 (例: ユキ)"
+                        value={newVoice.nameJa}
+                        onChange={(e) => setNewVoice({ ...newVoice, nameJa: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="年齢範囲 (例: 22-26)"
+                        value={newVoice.ageRange}
+                        onChange={(e) => setNewVoice({ ...newVoice, ageRange: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      />
+                      <select
+                        value={newVoice.gender}
+                        onChange={(e) => setNewVoice({ ...newVoice, gender: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      >
+                        <option value="female">女性</option>
+                        <option value="male">男性</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="性格 (英語)"
+                        value={newVoice.personality}
+                        onChange={(e) => setNewVoice({ ...newVoice, personality: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="性格 (日本語)"
+                        value={newVoice.personalityJa}
+                        onChange={(e) => setNewVoice({ ...newVoice, personalityJa: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3 mt-4">
+                      <button
+                        onClick={() => setShowAddVoice(false)}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        onClick={addVoice}
+                        className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+                      >
+                        追加
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Voice List */}
                 <div className="space-y-4">
@@ -502,10 +840,10 @@ export function AdminDashboard() {
                         <div className="flex items-center space-x-3">
                           <VoicePreview voiceId={voice.id} voiceName={voice.nameJa} />
                           <button
-                            onClick={() => setEditingVoice(voice.id)}
-                            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                            onClick={() => deleteVoice(voice.id)}
+                            className="p-2 text-red-400 hover:text-red-600 transition-colors"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -513,7 +851,7 @@ export function AdminDashboard() {
                   ))}
                 </div>
 
-                {/* Add Relationship Types */}
+                {/* Relationship Types Management */}
                 <div className="bg-white rounded-xl p-6 shadow-lg">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">関係性タイプ管理</h3>
@@ -525,18 +863,178 @@ export function AdminDashboard() {
                       関係性追加
                     </button>
                   </div>
+
+                  {showAddRelation && (
+                    <div className="mb-4 p-4 border border-gray-200 rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input
+                          type="text"
+                          placeholder="日本語 (例: 友達)"
+                          value={newRelation.label}
+                          onChange={(e) => setNewRelation({ ...newRelation, label: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="英語 (例: Friend)"
+                          value={newRelation.labelEn}
+                          onChange={(e) => setNewRelation({ ...newRelation, labelEn: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-3 mt-3">
+                        <button
+                          onClick={() => setShowAddRelation(false)}
+                          className="px-3 py-1 text-gray-600 hover:text-gray-800 transition-colors"
+                        >
+                          キャンセル
+                        </button>
+                        <button
+                          onClick={addRelationship}
+                          className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                        >
+                          追加
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {relationshipTypes.map((relation) => (
                       <div key={relation.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                         <span className="text-sm font-medium">{relation.label}</span>
-                        <button className="text-red-400 hover:text-red-600">
+                        <button 
+                          onClick={() => deleteRelationship(relation.id)}
+                          className="text-red-400 hover:text-red-600"
+                        >
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     ))}
                   </div>
                 </div>
+
+                {/* Characteristics Management */}
+                <div className="bg-white rounded-xl p-6 shadow-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">特徴管理</h3>
+                    <button 
+                      onClick={() => setShowAddCharacteristic(true)}
+                      className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-2 inline" />
+                      特徴追加
+                    </button>
+                  </div>
+
+                  {showAddCharacteristic && (
+                    <div className="mb-4 p-4 border border-gray-200 rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input
+                          type="text"
+                          placeholder="日本語 (例: 優しい)"
+                          value={newCharacteristic.label}
+                          onChange={(e) => setNewCharacteristic({ ...newCharacteristic, label: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="英語 (例: Gentle)"
+                          value={newCharacteristic.labelEn}
+                          onChange={(e) => setNewCharacteristic({ ...newCharacteristic, labelEn: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-3 mt-3">
+                        <button
+                          onClick={() => setShowAddCharacteristic(false)}
+                          className="px-3 py-1 text-gray-600 hover:text-gray-800 transition-colors"
+                        >
+                          キャンセル
+                        </button>
+                        <button
+                          onClick={addCharacteristic}
+                          className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+                        >
+                          追加
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {characteristics.map((char) => (
+                      <div key={char.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                        <span className="text-sm font-medium">{char.label}</span>
+                        <button 
+                          onClick={() => deleteCharacteristic(char.id)}
+                          className="text-red-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Created Partners Tab */}
+            {activeTab === 'partners' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-gray-900">作成されたKokoro</h2>
+                
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kokoro</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作成者</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">関係性</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent ID</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作成日</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {createdPartners.map((partner) => (
+                          <tr key={partner.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <img className="h-10 w-10 rounded-full object-cover" src={partner.imageUrl} alt="" />
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{partner.name}</div>
+                                  <div className="text-sm text-gray-500">呼び名: {partner.userCallName}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {partner.userName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {partner.relationshipType}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                {partner.agentId || 'N/A'}
+                              </code>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {formatDate(new Date(partner.createdAt))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {createdPartners.length === 0 && (
+                  <div className="text-center py-12">
+                    <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">まだKokoroが作成されていません</p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -134,7 +134,13 @@ export function AdminDashboard() {
     // Load members
     const savedMembers = localStorage.getItem('adminMembers');
     if (savedMembers) {
-      setMembers(JSON.parse(savedMembers));
+      const parsedMembers = JSON.parse(savedMembers);
+      const membersWithDates = parsedMembers.map((member: any) => ({
+        ...member,
+        createdAt: new Date(member.createdAt),
+        lastLogin: member.lastLogin ? new Date(member.lastLogin) : undefined
+      }));
+      setMembers(membersWithDates);
     } else {
       // Initialize with default members
       const defaultMembers = [
@@ -173,13 +179,24 @@ export function AdminDashboard() {
     // Load created partners
     const savedPartners = localStorage.getItem('createdPartners');
     if (savedPartners) {
-      setCreatedPartners(JSON.parse(savedPartners));
+      const parsedPartners = JSON.parse(savedPartners);
+      const partnersWithDates = parsedPartners.map((partner: any) => ({
+        ...partner,
+        createdAt: new Date(partner.createdAt),
+        lastTalkedAt: partner.lastTalkedAt ? new Date(partner.lastTalkedAt) : undefined
+      }));
+      setCreatedPartners(partnersWithDates);
     }
     
     // Load logs
     const savedLogs = localStorage.getItem('adminLogs');
     if (savedLogs) {
-      setLogs(JSON.parse(savedLogs));
+      const parsedLogs = JSON.parse(savedLogs);
+      const logsWithDates = parsedLogs.map((log: any) => ({
+        ...log,
+        timestamp: new Date(log.timestamp)
+      }));
+      setLogs(logsWithDates);
     } else {
       // Initialize with default logs
       const defaultLogs = [

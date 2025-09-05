@@ -29,7 +29,14 @@ export function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{t('myPartners')}</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{t('myPartners')}</h1>
+            {user && user.role !== 'admin' && (
+              <p className="text-sm text-gray-600 mt-1">
+                残り通話時間: {user.minutesRemaining}分
+              </p>
+            )}
+          </div>
           <Link
             to="/create"
             className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-semibold rounded-full hover:from-sky-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"

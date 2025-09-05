@@ -101,146 +101,150 @@ export function AdminDashboard() {
 
   // Load saved data on mount
   useEffect(() => {
-    // Load API key
-    const savedApiKey = localStorage.getItem('retellApiKey');
-    if (savedApiKey) {
-      setRetellApiKey(savedApiKey);
-      setApiKeyStatus('connected');
-    }
-    
-    // Load voices
-    const savedVoices = localStorage.getItem('adminVoices');
-    if (savedVoices) {
-      setVoices(JSON.parse(savedVoices));
-    }
-    
-    // Load relationship types
-    const savedRelationships = localStorage.getItem('adminRelationships');
-    if (savedRelationships) {
-      setRelationshipTypes(JSON.parse(savedRelationships));
-    }
-    
-    // Load characteristics
-    const savedCharacteristics = localStorage.getItem('adminCharacteristics');
-    if (savedCharacteristics) {
-      setCharacteristics(JSON.parse(savedCharacteristics));
-    }
-    
-    // Load demo voices
-    const savedDemoVoices = localStorage.getItem('demoVoices');
-    if (savedDemoVoices) {
-      const parsed = JSON.parse(savedDemoVoices);
-      setDemoVoices(parsed);
-      setSelectedDemoCount(parsed.filter((v: DemoVoice) => v.isSelected).length);
-    }
-    
-    // Load members
-    const savedMembers = localStorage.getItem('adminMembers');
-    if (savedMembers) {
-      const parsedMembers = JSON.parse(savedMembers);
-      const membersWithDates = parsedMembers.map((member: any) => ({
-        ...member,
-        createdAt: new Date(member.createdAt),
-        lastLogin: member.lastLogin ? new Date(member.lastLogin) : undefined
-      }));
-      setMembers(membersWithDates);
-    } else {
-      // Initialize with default members
-      const defaultMembers = [
-        {
-          id: '1',
-          name: 'Admin User',
-          email: 'admin@kokoro.com',
-          role: 'admin' as const,
-          createdAt: new Date('2024-01-15'),
-          lastLogin: new Date(),
-          partnersCount: 0
-        },
-        {
-          id: '2',
-          name: 'Regular User',
-          email: 'user@example.com',
-          role: 'user' as const,
-          createdAt: new Date('2024-01-20'),
-          lastLogin: new Date('2024-01-22'),
-          partnersCount: 2
-        },
-        {
-          id: '3',
-          name: 'Tafser Yeamin',
-          email: 'tafser.yeamin.tiu@gmail.com',
-          role: 'admin' as const,
-          createdAt: new Date('2024-01-10'),
-          lastLogin: new Date(),
-          partnersCount: 1
-        }
-      ];
-      setMembers(defaultMembers);
-      localStorage.setItem('adminMembers', JSON.stringify(defaultMembers));
-    }
-    
-    // Load created partners
-    const savedPartners = localStorage.getItem('createdPartners');
-    if (savedPartners) {
-      const parsedPartners = JSON.parse(savedPartners);
-      const partnersWithDates = parsedPartners.map((partner: any) => ({
-        ...partner,
-        createdAt: new Date(partner.createdAt),
-        lastTalkedAt: partner.lastTalkedAt ? new Date(partner.lastTalkedAt) : undefined
-      }));
-      setCreatedPartners(partnersWithDates);
-    }
-    
-    // Load call logs
-    const savedCallLogs = localStorage.getItem('callLogs');
-    if (savedCallLogs) {
-      const parsedCallLogs = JSON.parse(savedCallLogs);
-      const callLogsWithDates = parsedCallLogs.map((log: any) => ({
-        ...log,
-        timestamp: new Date(log.timestamp)
-      }));
-      setCallLogs(callLogsWithDates);
-    }
-    
-    // Load logs
-    const savedLogs = localStorage.getItem('adminLogs');
-    if (savedLogs) {
-      const parsedLogs = JSON.parse(savedLogs);
-      const logsWithDates = parsedLogs.map((log: any) => ({
-        ...log,
-        timestamp: new Date(log.timestamp)
-      }));
-      setLogs(logsWithDates);
-    } else {
-      // Initialize with default logs
-      const defaultLogs = [
-        {
-          id: '1',
-          userId: '2',
-          userName: 'Regular User',
-          action: 'Partner Created',
-          timestamp: new Date('2024-01-22T10:30:00'),
-          details: 'Created partner "Yuki" with girlfriend relationship'
-        },
-        {
-          id: '2',
-          userId: '2',
-          userName: 'Regular User',
-          action: 'Voice Call',
-          timestamp: new Date('2024-01-22T14:15:00'),
-          details: 'Started call with partner "Yuki" - Duration: 15 minutes'
-        },
-        {
-          id: '3',
-          userId: '3',
-          userName: 'Tafser Yeamin',
-          action: 'Admin Login',
-          timestamp: new Date(),
-          details: 'Admin accessed dashboard'
-        }
-      ];
-      setLogs(defaultLogs);
-      localStorage.setItem('adminLogs', JSON.stringify(defaultLogs));
+    try {
+      // Load API key
+      const savedApiKey = localStorage.getItem('retellApiKey');
+      if (savedApiKey) {
+        setRetellApiKey(savedApiKey);
+        setApiKeyStatus('connected');
+      }
+      
+      // Load voices
+      const savedVoices = localStorage.getItem('adminVoices');
+      if (savedVoices) {
+        setVoices(JSON.parse(savedVoices));
+      }
+      
+      // Load relationship types
+      const savedRelationships = localStorage.getItem('adminRelationships');
+      if (savedRelationships) {
+        setRelationshipTypes(JSON.parse(savedRelationships));
+      }
+      
+      // Load characteristics
+      const savedCharacteristics = localStorage.getItem('adminCharacteristics');
+      if (savedCharacteristics) {
+        setCharacteristics(JSON.parse(savedCharacteristics));
+      }
+      
+      // Load demo voices
+      const savedDemoVoices = localStorage.getItem('demoVoices');
+      if (savedDemoVoices) {
+        const parsed = JSON.parse(savedDemoVoices);
+        setDemoVoices(parsed);
+        setSelectedDemoCount(parsed.filter((v: DemoVoice) => v.isSelected).length);
+      }
+      
+      // Load members
+      const savedMembers = localStorage.getItem('adminMembers');
+      if (savedMembers) {
+        const parsedMembers = JSON.parse(savedMembers);
+        const membersWithDates = parsedMembers.map((member: any) => ({
+          ...member,
+          createdAt: new Date(member.createdAt),
+          lastLogin: member.lastLogin ? new Date(member.lastLogin) : undefined
+        }));
+        setMembers(membersWithDates);
+      } else {
+        // Initialize with default members
+        const defaultMembers = [
+          {
+            id: '1',
+            name: 'Admin User',
+            email: 'admin@kokoro.com',
+            role: 'admin' as const,
+            createdAt: new Date('2024-01-15'),
+            lastLogin: new Date(),
+            partnersCount: 0
+          },
+          {
+            id: '2',
+            name: 'Regular User',
+            email: 'user@example.com',
+            role: 'user' as const,
+            createdAt: new Date('2024-01-20'),
+            lastLogin: new Date('2024-01-22'),
+            partnersCount: 2
+          },
+          {
+            id: '3',
+            name: 'Tafser Yeamin',
+            email: 'tafser.yeamin.tiu@gmail.com',
+            role: 'admin' as const,
+            createdAt: new Date('2024-01-10'),
+            lastLogin: new Date(),
+            partnersCount: 1
+          }
+        ];
+        setMembers(defaultMembers);
+        localStorage.setItem('adminMembers', JSON.stringify(defaultMembers));
+      }
+      
+      // Load created partners
+      const savedPartners = localStorage.getItem('createdPartners');
+      if (savedPartners) {
+        const parsedPartners = JSON.parse(savedPartners);
+        const partnersWithDates = parsedPartners.map((partner: any) => ({
+          ...partner,
+          createdAt: new Date(partner.createdAt),
+          lastTalkedAt: partner.lastTalkedAt ? new Date(partner.lastTalkedAt) : undefined
+        }));
+        setCreatedPartners(partnersWithDates);
+      }
+      
+      // Load call logs
+      const savedCallLogs = localStorage.getItem('callLogs');
+      if (savedCallLogs) {
+        const parsedCallLogs = JSON.parse(savedCallLogs);
+        const callLogsWithDates = parsedCallLogs.map((log: any) => ({
+          ...log,
+          timestamp: new Date(log.timestamp)
+        }));
+        setCallLogs(callLogsWithDates);
+      }
+      
+      // Load logs
+      const savedLogs = localStorage.getItem('adminLogs');
+      if (savedLogs) {
+        const parsedLogs = JSON.parse(savedLogs);
+        const logsWithDates = parsedLogs.map((log: any) => ({
+          ...log,
+          timestamp: new Date(log.timestamp)
+        }));
+        setLogs(logsWithDates);
+      } else {
+        // Initialize with default logs
+        const defaultLogs = [
+          {
+            id: '1',
+            userId: '2',
+            userName: 'Regular User',
+            action: 'Partner Created',
+            timestamp: new Date('2024-01-22T10:30:00'),
+            details: 'Created partner "Yuki" with girlfriend relationship'
+          },
+          {
+            id: '2',
+            userId: '2',
+            userName: 'Regular User',
+            action: 'Voice Call',
+            timestamp: new Date('2024-01-22T14:15:00'),
+            details: 'Started call with partner "Yuki" - Duration: 15 minutes'
+          },
+          {
+            id: '3',
+            userId: '3',
+            userName: 'Tafser Yeamin',
+            action: 'Admin Login',
+            timestamp: new Date(),
+            details: 'Admin accessed dashboard'
+          }
+        ];
+        setLogs(defaultLogs);
+        localStorage.setItem('adminLogs', JSON.stringify(defaultLogs));
+      }
+    } catch (error) {
+      console.error('Error loading data from localStorage:', error);
     }
   }, []);
 
@@ -1033,7 +1037,7 @@ export function AdminDashboard() {
                           <tr key={partner.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                                <img className="h-10 w-10 rounded-full object-cover" src={partner.imageUrl} alt="" />
+                                <img className="h-10 w-10 rounded-full object-cover" src={partner.imageUrl || '/api/placeholder/40/40'} alt="" />
                                 <div className="ml-4">
                                   <div className="text-sm font-medium text-gray-900">{partner.name}</div>
                                   <div className="text-sm text-gray-500">呼び名: {partner.userCallName}</div>
@@ -1065,6 +1069,64 @@ export function AdminDashboard() {
                   <div className="text-center py-12">
                     <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">まだKokoroが作成されていません</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Call Logs Tab */}
+            {activeTab === 'calls' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-gray-900">通話ログ</h2>
+                
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">時刻</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kokoro</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">通話時間</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {callLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {formatDate(log.timestamp)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {log.userName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {log.partnerName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {log.duration}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                log.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                log.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {log.status === 'completed' ? '完了' :
+                                 log.status === 'failed' ? '失敗' : '進行中'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {callLogs.length === 0 && (
+                  <div className="text-center py-12">
+                    <Phone className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">まだ通話ログがありません</p>
                   </div>
                 )}
               </div>

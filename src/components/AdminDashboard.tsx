@@ -91,6 +91,9 @@ export function AdminDashboard() {
   // Created Partners
   const [createdPartners, setCreatedPartners] = useState<any[]>([]);
   
+  // Call Logs
+  const [callLogs, setCallLogs] = useState<any[]>([]);
+  
   // Logs
   const [logs, setLogs] = useState<LogEntry[]>([]);
   
@@ -186,6 +189,17 @@ export function AdminDashboard() {
         lastTalkedAt: partner.lastTalkedAt ? new Date(partner.lastTalkedAt) : undefined
       }));
       setCreatedPartners(partnersWithDates);
+    }
+    
+    // Load call logs
+    const savedCallLogs = localStorage.getItem('callLogs');
+    if (savedCallLogs) {
+      const parsedCallLogs = JSON.parse(savedCallLogs);
+      const callLogsWithDates = parsedCallLogs.map((log: any) => ({
+        ...log,
+        timestamp: new Date(log.timestamp)
+      }));
+      setCallLogs(callLogsWithDates);
     }
     
     // Load logs
@@ -400,6 +414,7 @@ export function AdminDashboard() {
     { id: 'members', label: 'メンバー管理', icon: Users },
     { id: 'voices', label: '音声管理', icon: Mic },
     { id: 'partners', label: '作成されたKokoro', icon: Heart },
+    { id: 'calls', label: '通話ログ', icon: Phone },
     { id: 'logs', label: 'ログ', icon: Activity },
   ];
 

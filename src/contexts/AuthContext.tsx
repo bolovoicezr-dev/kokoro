@@ -5,6 +5,9 @@ interface User {
   email: string;
   name: string;
   role: 'user' | 'admin';
+  minutesRemaining: number;
+  totalMinutesPurchased: number;
+  minutesUsed: number;
 }
 
 interface AuthContextType {
@@ -13,6 +16,8 @@ interface AuthContextType {
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   loading: boolean;
+  updateUserMinutes: (userId: string, minutesUsed: number) => void;
+  addMinutesToUser: (userId: string, minutesToAdd: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +30,9 @@ const mockUsers = [
     password: 'admin123',
     name: 'Admin User',
     role: 'admin' as const,
+    minutesRemaining: 999999, // Unlimited for admin
+    totalMinutesPurchased: 999999,
+    minutesUsed: 0,
   },
   {
     id: '2',
@@ -32,6 +40,9 @@ const mockUsers = [
     password: 'user123',
     name: 'Regular User',
     role: 'user' as const,
+    minutesRemaining: 2,
+    totalMinutesPurchased: 2,
+    minutesUsed: 0,
   },
   {
     id: '3',
@@ -39,6 +50,9 @@ const mockUsers = [
     password: '77Graminphone',
     name: 'Admin (Tafser Yeamin)',
     role: 'admin' as const,
+    minutesRemaining: 999999, // Unlimited for admin
+    totalMinutesPurchased: 999999,
+    minutesUsed: 0,
   },
 ];
 
@@ -110,6 +124,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       name,
       role: (isAdminEmail ? 'admin' : 'user') as const,
+      minutesRemaining: isAdminEmail ? 999999 : 2,
+      totalMinutesPurchased: isAdminEmail ? 999999 : 2,
+      minutesUsed: 0,
     };
     
     mockUsers.push(newUser);
@@ -132,8 +149,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('kokoroUser');
   };
 
+  const updateUserMinutes = (userId: string, minutesUsed: number) => {
+    if (user && user.id === userId) {
+      const updatedUser = {
+        ...user,
+        minutesUsed: user.minutesUsed + minutesUsed,
+        minutesRemaining: Math.max(0, user.minutesRemaining - minutesUsed)
+      };
+      setUser(updatedUser);
+      localStorage.setItem('kokoroUser', JSON.stringify(updatedUser));
+      
+      // Update in mockUsers array
+      const userIndex = mockUsers.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        mockUsers[userIndex] = { ...mockUsers[userIndex], ...updatedUser };
+      }
+    }
+  };
+
+  const addMinutesToUser = (userId: string, minutesToAdd: number) => {
+    if (user && user.id === userId) {
+      const updatedUser = {
+        ...user,
+        minutesRemaining: user.minutesRemaining + minutesToAdd,
+        totalMinutesPurchased: user.totalMinutesPurchased + minutesToAdd
+      };
+      setUser(updatedUser);
+      localStorage.setItem('kokoroUser', JSON.stringify(updatedUser));
+      
+      // Update in mockUsers array
+      const userIndex = mockUsers.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        mockUsers[userIndex] = { ...mockUsers[userIndex], ...updatedUser };
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUserMinutes, addMinutesToUser }}>
       {children}
     </AuthContext.Provider>
   );

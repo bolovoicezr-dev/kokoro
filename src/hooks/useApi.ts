@@ -20,7 +20,6 @@ export function useApi() {
       formData.append('characteristicsJa', data.characteristicsJa);
       formData.append('relationshipType', data.relationshipType);
       formData.append('userCallName', data.userCallName);
-      formData.append('provider', 'elevenlabs');
 
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',

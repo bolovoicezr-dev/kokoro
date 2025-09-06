@@ -57,7 +57,7 @@ export function AdminDashboard() {
   const { user } = useAuth();
   
   // API Key Management
-  const [retellApiKey, setRetellApiKey] = useState('');
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyStatus, setApiKeyStatus] = useState<'connected' | 'disconnected' | 'testing'>('disconnected');
   
@@ -83,21 +83,21 @@ export function AdminDashboard() {
   const [demoVoices, setDemoVoices] = useState<DemoVoice[]>([]);
   const [selectedDemoCount, setSelectedDemoCount] = useState(0);
   
-  // Member Management
+  const saveElevenLabsApiKey = () => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [showAddMember, setShowAddMember] = useState(false);
+    adminSettings.elevenLabsApiKey = elevenLabsApiKey;
   const [newMember, setNewMember] = useState({ name: '', email: '', password: '', role: 'user' });
   
   // Created Partners
   const [createdPartners, setCreatedPartners] = useState<any[]>([]);
-  
+      details: 'ElevenLabs API key updated',
   // Call Logs
   const [callLogs, setCallLogs] = useState<any[]>([]);
   
-  // Logs
+    alert('ElevenLabs API key saved successfully!');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   
-  const [activeTab, setActiveTab] = useState('api');
+  const testElevenLabsConnection = async () => {
 
   // Load saved data on mount
   useEffect(() => {
@@ -233,11 +233,11 @@ export function AdminDashboard() {
           },
           {
             id: '3',
-            userId: '3',
+      if (elevenLabsApiKey.length > 10) {
             userName: 'Tafser Yeamin',
             action: 'Admin Login',
             timestamp: new Date(),
-            details: 'Admin accessed dashboard'
+          details: 'ElevenLabs connection test successful',
           }
         ];
         setLogs(defaultLogs);
@@ -245,7 +245,7 @@ export function AdminDashboard() {
       }
     } catch (error) {
       console.error('Error loading data from localStorage:', error);
-    }
+    setElevenLabsApiKey(adminSettings.elevenLabsApiKey || '');
   }, []);
 
   const testApiKey = async () => {
@@ -515,13 +515,13 @@ export function AdminDashboard() {
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                   <p className="text-blue-800 text-sm">
                     <strong>重要:</strong> Retell AI APIキーを設定すると、ユーザーが通話ボタンを押した時にリアルタイム音声通話が開始されます。
-                  </p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">ElevenLabs Settings</h3>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Retell AI APIキー
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">ElevenLabs API Key</label>
                   <div className="flex space-x-3">
                     <div className="flex-1 relative">
                       <input
@@ -737,9 +737,9 @@ export function AdminDashboard() {
                   <div className="mb-4">
                     <input
                       type="file"
-                      accept="audio/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
+                      value={elevenLabsApiKey}
+                      onChange={(e) => setElevenLabsApiKey(e.target.value)}
+                      placeholder="sk-..."
                         if (file) handleDemoVoiceUpload(file);
                       }}
                       className="hidden"
@@ -1129,8 +1129,8 @@ export function AdminDashboard() {
                     <p className="text-gray-500">まだ通話ログがありません</p>
                   </div>
                 )}
-              </div>
-            )}
+                      onClick={saveElevenLabsApiKey}
+                      disabled={!elevenLabsApiKey}
 
             {/* Logs Tab */}
             {activeTab === 'logs' && (
@@ -1140,8 +1140,8 @@ export function AdminDashboard() {
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
+                    onClick={testElevenLabsConnection}
+                    disabled={!elevenLabsApiKey || isTestingConnection}
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">時刻</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">アクション</th>
@@ -1171,7 +1171,7 @@ export function AdminDashboard() {
                               {log.details}
                             </td>
                           </tr>
-                        ))}
+                  <li>1. ElevenLabs ダッシュボードにログイン</li>
                       </tbody>
                     </table>
                   </div>

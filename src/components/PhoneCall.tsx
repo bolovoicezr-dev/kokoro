@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX, CreditCard } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useElevenLabs } from '../hooks/useElevenLabs';
 
 // Stripe payment plans (in Japanese Yen)
 const PAYMENT_PLANS = [
@@ -17,8 +16,8 @@ export function PhoneCall() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { user, updateUserMinutes } = useAuth();
-  const { callState, initializeCall, endCall: endElevenLabsCall, toggleMute } = useElevenLabs();
   
+  const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -38,28 +37,19 @@ export function PhoneCall() {
 
   useEffect(() => {
     // Only start connection if user has minutes or is admin
-    if (user && (user.minutesRemaining > 0 || user.role === 'admin') && partner?.agentId) {
-      // Get ElevenLabs API key from admin settings
-      const adminSettings = JSON.parse(localStorage.getItem('adminSettings') || '{}');
-      const elevenLabsApiKey = adminSettings.elevenLabsApiKey;
-      
-      if (elevenLabsApiKey) {
-        initializeCall({
-          apiKey: elevenLabsApiKey,
-          agentId: partner.agentId,
-        });
-      }
+    if (user && (user.minutesRemaining > 0 || user.role === 'admin')) {
+      const timer = setTimeout(() => {
+        setIsConnected(true);
+        setCallStartTime(new Date());
+      }, 2000);
+
+      return () => clearTimeout(timer);
     }
-  }, [user, partner, initializeCall]);
+  }, [user]);
 
   useEffect(() => {
-    if (callState.isConnected && !callStartTime) {
-      setCallStartTime(new Date());
-    }
-  }, [callState.isConnected, callStartTime]);
-  useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (callState.isConnected && callStartTime) {
+    if (isConnected && callStartTime) {
       interval = setInterval(() => {
         const now = new Date();
         const duration = Math.floor((now.getTime() - callStartTime.getTime()) / 1000);
@@ -76,7 +66,7 @@ export function PhoneCall() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [callState.isConnected, callStartTime, user]);
+  }, [isConnected, callStartTime, user]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -85,8 +75,6 @@ export function PhoneCall() {
   };
 
   const endCall = () => {
-    endElevenLabsCall();
-    
     if (callStartTime && user && user.role !== 'admin') {
       const callEndTime = new Date();
       const totalSeconds = Math.floor((callEndTime.getTime() - callStartTime.getTime()) / 1000);
@@ -106,7 +94,6 @@ export function PhoneCall() {
         duration: totalSeconds,
         minutesUsed: minutesUsed,
         timestamp: new Date(),
-        provider: 'elevenlabs',
       };
       
       const existingLogs = JSON.parse(localStorage.getItem('callLogs') || '[]');
@@ -116,11 +103,6 @@ export function PhoneCall() {
     navigate('/dashboard');
   };
 
-  const handleMuteToggle = () => {
-    const newMutedState = !isMuted;
-    setIsMuted(newMutedState);
-    toggleMute(newMutedState);
-  };
   const handlePayment = (plan: typeof PAYMENT_PLANS[0]) => {
     // In production, this would integrate with Stripe
     alert(`Stripe payment integration for ${plan.label} - ¥${plan.price} (including tax)`);
@@ -215,9 +197,9 @@ export function PhoneCall() {
         {/* Top Section */}
         <div className="text-center">
           <p className="text-sm opacity-80 mb-2">
-            {callState.isConnected ? t('connected') : callState.isConnecting ? t('calling') : 'Initializing...'}
+            {isConnected ? t('connected') : t('calling')}
           </p>
-          {callState.isConnected && (
+          {isConnected && (
             <div className="space-y-1">
               <p className="text-sm opacity-60">{formatDuration(callDuration)}</p>
               {user && user.role !== 'admin' && (
@@ -227,16 +209,13 @@ export function PhoneCall() {
               )}
             </div>
           )}
-          {callState.error && (
-            <p className="text-red-400 text-sm">{callState.error}</p>
-          )}
         </div>
 
         {/* Partner Info */}
         <div className="text-center flex-1 flex flex-col justify-center">
           <div className="relative mb-6">
             <div className={`w-48 h-48 rounded-full overflow-hidden mx-auto border-4 border-white/20 ${
-              callState.isConnected ? '' : 'animate-pulse'
+              isConnected ? '' : 'animate-pulse'
             }`}>
               <img
                 src={partner.imageUrl}
@@ -244,7 +223,7 @@ export function PhoneCall() {
                 className="w-full h-full object-cover"
               />
             </div>
-            {!callState.isConnected && (
+            {!isConnected && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-48 h-48 rounded-full border-4 border-white/40 animate-ping"></div>
               </div>
@@ -261,7 +240,7 @@ export function PhoneCall() {
         <div className="w-full max-w-sm">
           <div className="flex justify-center space-x-8 mb-8">
             <button
-              onClick={handleMuteToggle}
+              onClick={() => setIsMuted(!isMuted)}
               className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg ${
                 isMuted
                   ? 'bg-red-500 hover:bg-red-600'

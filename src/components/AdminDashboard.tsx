@@ -1,409 +1,186 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Users, Mic, Activity, Plus, Edit2, Trash2, Save, X, Play, Pause, Eye, EyeOff, UserPlus, Heart, Phone } from 'lucide-react';
-import { useLanguage } from '../contexts/LanguageContext';
+import { Settings, Users, Phone, Clock, Plus, Trash2, Upload, Play, Pause, Volume2, CheckCircle, Download } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { VoicePreview } from './VoicePreview';
 
-interface Member {
-  id: string;
-  name: string;
-  email: string;
-  role: 'user' | 'admin';
-  createdAt: Date;
-  lastLogin?: Date;
-  partnersCount: number;
-}
-
 interface LogEntry {
   id: string;
-  userId: string;
-  userName: string;
-  action: string;
   timestamp: Date;
+  action: string;
   details: string;
 }
 
-interface DemoVoice {
+interface CallLog {
   id: string;
+  userId: string;
+  userName: string;
+  partnerId: string;
+  partnerName: string;
+  agentId: string;
+  duration: number;
+  minutesUsed: number;
+  timestamp: Date;
+  provider: string;
+}
+
+interface Member {
+  id: string;
+  email: string;
   name: string;
-  audioUrl: string;
-  isSelected: boolean;
-}
-
-interface Voice {
-  id: string;
-  name: string;
-  nameJa: string;
-  gender: 'male' | 'female';
-  ageRange: string;
-  personality: string;
-  personalityJa: string;
-}
-
-interface RelationshipType {
-  id: string;
-  label: string;
-  labelEn: string;
-}
-
-interface Characteristic {
-  id: string;
-  label: string;
-  labelEn: string;
+  role: string;
+  minutesRemaining: number;
+  totalMinutesPurchased: number;
+  minutesUsed: number;
+  createdAt: Date;
+  lastLogin?: Date;
 }
 
 export function AdminDashboard() {
-  const { t, language } = useLanguage();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('voices');
   
-  // API Key Management
-  const [retellApiKey, setRetellApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [apiKeyStatus, setApiKeyStatus] = useState<'connected' | 'disconnected' | 'testing'>('disconnected');
-  
+  // ElevenLabs Settings
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState('');
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
   // Voice Management
-  const [voices, setVoices] = useState<Voice[]>([]);
-  const [editingVoice, setEditingVoice] = useState<string | null>(null);
-  const [newVoice, setNewVoice] = useState({ name: '', nameJa: '', personality: '', personalityJa: '', gender: 'female', ageRange: '' });
-  const [showAddVoice, setShowAddVoice] = useState(false);
-  
-  // Relationship Management
-  const [relationshipTypes, setRelationshipTypes] = useState<RelationshipType[]>([]);
-  const [editingRelation, setEditingRelation] = useState<string | null>(null);
-  const [newRelation, setNewRelation] = useState({ label: '', labelEn: '' });
-  const [showAddRelation, setShowAddRelation] = useState(false);
-  
-  // Characteristics Management
-  const [characteristics, setCharacteristics] = useState<Characteristic[]>([]);
-  const [editingCharacteristic, setEditingCharacteristic] = useState<string | null>(null);
-  const [newCharacteristic, setNewCharacteristic] = useState({ label: '', labelEn: '' });
-  const [showAddCharacteristic, setShowAddCharacteristic] = useState(false);
-  
-  // Demo Voice Management
-  const [demoVoices, setDemoVoices] = useState<DemoVoice[]>([]);
-  const [selectedDemoCount, setSelectedDemoCount] = useState(0);
-  
-  // Member Management
+  const [voices, setVoices] = useState<any[]>([]);
+  const [newVoice, setNewVoice] = useState({
+    name: '',
+    nameJa: '',
+    gender: 'female' as 'male' | 'female',
+    ageRange: '',
+    personality: '',
+    personalityJa: '',
+  });
+
+  // Relationship Types
+  const [relationshipTypes, setRelationshipTypes] = useState<any[]>([]);
+  const [newRelationship, setNewRelationship] = useState({
+    label: '',
+    labelEn: '',
+  });
+
+  // Characteristics
+  const [characteristics, setCharacteristics] = useState<any[]>([]);
+  const [newCharacteristic, setNewCharacteristic] = useState({
+    label: '',
+    labelEn: '',
+  });
+
+  // Demo Voices
+  const [demoVoices, setDemoVoices] = useState<any[]>([]);
+
+  // Call Logs
+  const [callLogs, setCallLogs] = useState<CallLog[]>([]);
+
+  // System Logs
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  // Members
   const [members, setMembers] = useState<Member[]>([]);
-  const [showAddMember, setShowAddMember] = useState(false);
-  const [newMember, setNewMember] = useState({ name: '', email: '', password: '', role: 'user' });
-  
+  const [selectedMember, setSelectedMember] = useState<string>('');
+  const [minutesToAdd, setMinutesToAdd] = useState<number>(0);
+
   // Created Partners
   const [createdPartners, setCreatedPartners] = useState<any[]>([]);
-  
-  // Call Logs
-  const [callLogs, setCallLogs] = useState<any[]>([]);
-  
-  // Logs
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  
-  const [activeTab, setActiveTab] = useState('api');
 
-  // Load saved data on mount
+  // Load data on component mount
   useEffect(() => {
-    try {
-      // Load API key
-      const savedApiKey = localStorage.getItem('retellApiKey');
-      if (savedApiKey) {
-        setRetellApiKey(savedApiKey);
-        setApiKeyStatus('connected');
-      }
-      
-      // Load voices
-      const savedVoices = localStorage.getItem('adminVoices');
-      if (savedVoices) {
-        setVoices(JSON.parse(savedVoices));
-      }
-      
-      // Load relationship types
-      const savedRelationships = localStorage.getItem('adminRelationships');
-      if (savedRelationships) {
-        setRelationshipTypes(JSON.parse(savedRelationships));
-      }
-      
-      // Load characteristics
-      const savedCharacteristics = localStorage.getItem('adminCharacteristics');
-      if (savedCharacteristics) {
-        setCharacteristics(JSON.parse(savedCharacteristics));
-      }
-      
-      // Load demo voices
-      const savedDemoVoices = localStorage.getItem('demoVoices');
-      if (savedDemoVoices) {
-        const parsed = JSON.parse(savedDemoVoices);
-        setDemoVoices(parsed);
-        setSelectedDemoCount(parsed.filter((v: DemoVoice) => v.isSelected).length);
-      }
-      
-      // Load members
-      const savedMembers = localStorage.getItem('adminMembers');
-      if (savedMembers) {
-        const parsedMembers = JSON.parse(savedMembers);
-        const membersWithDates = parsedMembers.map((member: any) => ({
-          ...member,
-          createdAt: new Date(member.createdAt),
-          lastLogin: member.lastLogin ? new Date(member.lastLogin) : undefined
-        }));
-        setMembers(membersWithDates);
-      } else {
-        // Initialize with default members
-        const defaultMembers = [
-          {
-            id: '1',
-            name: 'Admin User',
-            email: 'admin@kokoro.com',
-            role: 'admin' as const,
-            createdAt: new Date('2024-01-15'),
-            lastLogin: new Date(),
-            partnersCount: 0
-          },
-          {
-            id: '2',
-            name: 'Regular User',
-            email: 'user@example.com',
-            role: 'user' as const,
-            createdAt: new Date('2024-01-20'),
-            lastLogin: new Date('2024-01-22'),
-            partnersCount: 2
-          },
-          {
-            id: '3',
-            name: 'Tafser Yeamin',
-            email: 'tafser.yeamin.tiu@gmail.com',
-            role: 'admin' as const,
-            createdAt: new Date('2024-01-10'),
-            lastLogin: new Date(),
-            partnersCount: 1
-          }
-        ];
-        setMembers(defaultMembers);
-        localStorage.setItem('adminMembers', JSON.stringify(defaultMembers));
-      }
-      
-      // Load created partners
-      const savedPartners = localStorage.getItem('createdPartners');
-      if (savedPartners) {
-        const parsedPartners = JSON.parse(savedPartners);
-        const partnersWithDates = parsedPartners.map((partner: any) => ({
-          ...partner,
-          createdAt: new Date(partner.createdAt),
-          lastTalkedAt: partner.lastTalkedAt ? new Date(partner.lastTalkedAt) : undefined
-        }));
-        setCreatedPartners(partnersWithDates);
-      }
-      
-      // Load call logs
-      const savedCallLogs = localStorage.getItem('callLogs');
-      if (savedCallLogs) {
-        const parsedCallLogs = JSON.parse(savedCallLogs);
-        const callLogsWithDates = parsedCallLogs.map((log: any) => ({
-          ...log,
-          timestamp: new Date(log.timestamp)
-        }));
-        setCallLogs(callLogsWithDates);
-      }
-      
-      // Load logs
-      const savedLogs = localStorage.getItem('adminLogs');
-      if (savedLogs) {
-        const parsedLogs = JSON.parse(savedLogs);
-        const logsWithDates = parsedLogs.map((log: any) => ({
-          ...log,
-          timestamp: new Date(log.timestamp)
-        }));
-        setLogs(logsWithDates);
-      } else {
-        // Initialize with default logs
-        const defaultLogs = [
-          {
-            id: '1',
-            userId: '2',
-            userName: 'Regular User',
-            action: 'Partner Created',
-            timestamp: new Date('2024-01-22T10:30:00'),
-            details: 'Created partner "Yuki" with girlfriend relationship'
-          },
-          {
-            id: '2',
-            userId: '2',
-            userName: 'Regular User',
-            action: 'Voice Call',
-            timestamp: new Date('2024-01-22T14:15:00'),
-            details: 'Started call with partner "Yuki" - Duration: 15 minutes'
-          },
-          {
-            id: '3',
-            userId: '3',
-            userName: 'Tafser Yeamin',
-            action: 'Admin Login',
-            timestamp: new Date(),
-            details: 'Admin accessed dashboard'
-          }
-        ];
-        setLogs(defaultLogs);
-        localStorage.setItem('adminLogs', JSON.stringify(defaultLogs));
-      }
-    } catch (error) {
-      console.error('Error loading data from localStorage:', error);
-    }
+    loadAllData();
   }, []);
 
-  const testApiKey = async () => {
-    if (!retellApiKey.trim()) return;
-    
-    setApiKeyStatus('testing');
-    // Simulate API test
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setApiKeyStatus('connected');
-    localStorage.setItem('retellApiKey', retellApiKey);
+  const loadAllData = () => {
+    // Load ElevenLabs settings
+    const savedApiKey = localStorage.getItem('elevenLabsApiKey');
+    if (savedApiKey) {
+      setElevenLabsApiKey(savedApiKey);
+    }
+
+    // Load voices
+    const savedVoices = localStorage.getItem('adminVoices');
+    if (savedVoices) {
+      setVoices(JSON.parse(savedVoices));
+    }
+
+    // Load relationship types
+    const savedRelationships = localStorage.getItem('adminRelationships');
+    if (savedRelationships) {
+      setRelationshipTypes(JSON.parse(savedRelationships));
+    }
+
+    // Load characteristics
+    const savedCharacteristics = localStorage.getItem('adminCharacteristics');
+    if (savedCharacteristics) {
+      setCharacteristics(JSON.parse(savedCharacteristics));
+    }
+
+    // Load demo voices
+    const savedDemoVoices = localStorage.getItem('demoVoices');
+    if (savedDemoVoices) {
+      setDemoVoices(JSON.parse(savedDemoVoices));
+    }
+
+    // Load call logs
+    const savedCallLogs = localStorage.getItem('callLogs');
+    if (savedCallLogs) {
+      const parsedLogs = JSON.parse(savedCallLogs).map((log: any) => ({
+        ...log,
+        timestamp: new Date(log.timestamp)
+      }));
+      setCallLogs(parsedLogs);
+    }
+
+    // Load system logs
+    const savedLogs = localStorage.getItem('adminLogs');
+    if (savedLogs) {
+      const parsedLogs = JSON.parse(savedLogs).map((log: any) => ({
+        ...log,
+        timestamp: new Date(log.timestamp)
+      }));
+      setLogs(parsedLogs);
+    }
+
+    // Load members
+    const savedMembers = localStorage.getItem('adminMembers');
+    if (savedMembers) {
+      const parsedMembers = JSON.parse(savedMembers).map((member: any) => ({
+        ...member,
+        createdAt: new Date(member.createdAt),
+        lastLogin: member.lastLogin ? new Date(member.lastLogin) : undefined
+      }));
+      setMembers(parsedMembers);
+    }
+
+    // Load created partners
+    const savedPartners = localStorage.getItem('createdPartners');
+    if (savedPartners) {
+      const parsedPartners = JSON.parse(savedPartners).map((partner: any) => ({
+        ...partner,
+        createdAt: new Date(partner.createdAt),
+        lastTalkedAt: partner.lastTalkedAt ? new Date(partner.lastTalkedAt) : undefined
+      }));
+      setCreatedPartners(parsedPartners);
+    }
   };
 
-  // Voice Management Functions
-  const addVoice = () => {
-    if (!newVoice.name || !newVoice.nameJa || !newVoice.personality || !newVoice.personalityJa || !newVoice.ageRange) return;
-    
-    const voice: Voice = {
+  const addLog = (action: string, details: string) => {
+    const newLog: LogEntry = {
       id: Date.now().toString(),
-      ...newVoice,
-      gender: newVoice.gender as 'male' | 'female',
+      timestamp: new Date(),
+      action,
+      details,
     };
-    
-    const updatedVoices = [...voices, voice];
-    setVoices(updatedVoices);
-    localStorage.setItem('adminVoices', JSON.stringify(updatedVoices));
-    setNewVoice({ name: '', nameJa: '', personality: '', personalityJa: '', gender: 'female', ageRange: '' });
-    setShowAddVoice(false);
-  };
-
-  const deleteVoice = (voiceId: string) => {
-    if (confirm('この音声を削除しますか？')) {
-      const updatedVoices = voices.filter(v => v.id !== voiceId);
-      setVoices(updatedVoices);
-      localStorage.setItem('adminVoices', JSON.stringify(updatedVoices));
-    }
-  };
-
-  // Relationship Management Functions
-  const addRelationship = () => {
-    if (!newRelation.label || !newRelation.labelEn) return;
-    
-    const relationship: RelationshipType = {
-      id: Date.now().toString(),
-      ...newRelation,
-    };
-    
-    const updatedRelationships = [...relationshipTypes, relationship];
-    setRelationshipTypes(updatedRelationships);
-    localStorage.setItem('adminRelationships', JSON.stringify(updatedRelationships));
-    setNewRelation({ label: '', labelEn: '' });
-    setShowAddRelation(false);
-  };
-
-  const deleteRelationship = (relationId: string) => {
-    if (confirm('この関係性を削除しますか？')) {
-      const updatedRelationships = relationshipTypes.filter(r => r.id !== relationId);
-      setRelationshipTypes(updatedRelationships);
-      localStorage.setItem('adminRelationships', JSON.stringify(updatedRelationships));
-    }
-  };
-
-  // Characteristics Management Functions
-  const addCharacteristic = () => {
-    if (!newCharacteristic.label || !newCharacteristic.labelEn) return;
-    
-    const characteristic: Characteristic = {
-      id: Date.now().toString(),
-      ...newCharacteristic,
-    };
-    
-    const updatedCharacteristics = [...characteristics, characteristic];
-    setCharacteristics(updatedCharacteristics);
-    localStorage.setItem('adminCharacteristics', JSON.stringify(updatedCharacteristics));
-    setNewCharacteristic({ label: '', labelEn: '' });
-    setShowAddCharacteristic(false);
-  };
-
-  const deleteCharacteristic = (charId: string) => {
-    if (confirm('この特徴を削除しますか？')) {
-      const updatedCharacteristics = characteristics.filter(c => c.id !== charId);
-      setCharacteristics(updatedCharacteristics);
-      localStorage.setItem('adminCharacteristics', JSON.stringify(updatedCharacteristics));
-    }
-  };
-
-  // Demo Voice Functions
-  const handleDemoVoiceUpload = (file: File) => {
-    const audioUrl = URL.createObjectURL(file);
-    const newDemoVoice: DemoVoice = {
-      id: Date.now().toString(),
-      name: file.name.replace(/\.[^/.]+$/, ""),
-      audioUrl,
-      isSelected: false
-    };
-    
-    const updatedVoices = [...demoVoices, newDemoVoice];
-    setDemoVoices(updatedVoices);
-    localStorage.setItem('demoVoices', JSON.stringify(updatedVoices));
-  };
-
-  const toggleDemoVoiceSelection = (voiceId: string) => {
-    const voice = demoVoices.find(v => v.id === voiceId);
-    if (!voice) return;
-    
-    const currentSelected = demoVoices.filter(v => v.isSelected).length;
-    
-    if (!voice.isSelected && currentSelected >= 3) {
-      alert('最大3つまでしか選択できません');
-      return;
-    }
-    
-    const updatedVoices = demoVoices.map(v => 
-      v.id === voiceId ? { ...v, isSelected: !v.isSelected } : v
-    );
-    
-    setDemoVoices(updatedVoices);
-    setSelectedDemoCount(updatedVoices.filter(v => v.isSelected).length);
-    localStorage.setItem('demoVoices', JSON.stringify(updatedVoices));
-  };
-
-  const deleteDemoVoice = (voiceId: string) => {
-    if (confirm('このデモ音声を削除しますか？')) {
-      const updatedVoices = demoVoices.filter(v => v.id !== voiceId);
-      setDemoVoices(updatedVoices);
-      setSelectedDemoCount(updatedVoices.filter(v => v.isSelected).length);
-      localStorage.setItem('demoVoices', JSON.stringify(updatedVoices));
-    }
-  };
-
-  // Member Management Functions
-  const addMember = () => {
-    if (!newMember.name || !newMember.email || !newMember.password) return;
-    
-    const member: Member = {
-      id: Date.now().toString(),
-      name: newMember.name,
-      email: newMember.email,
-      role: newMember.role as 'user' | 'admin',
-      createdAt: new Date(),
-      partnersCount: 0
-    };
-    
-    const updatedMembers = [...members, member];
-    setMembers(updatedMembers);
-    localStorage.setItem('adminMembers', JSON.stringify(updatedMembers));
-    setNewMember({ name: '', email: '', password: '', role: 'user' });
-    setShowAddMember(false);
-  };
-
-  const deleteMember = (memberId: string) => {
-    if (confirm('このメンバーを削除しますか？')) {
-      const updatedMembers = members.filter(m => m.id !== memberId);
-      setMembers(updatedMembers);
-      localStorage.setItem('adminMembers', JSON.stringify(updatedMembers));
-    }
+    const updatedLogs = [newLog, ...logs];
+    setLogs(updatedLogs);
+    localStorage.setItem('adminLogs', JSON.stringify(updatedLogs));
   };
 
   const formatDate = (date: Date) => {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+      return 'Invalid Date';
+    }
     return new Intl.DateTimeFormat('ja-JP', {
       year: 'numeric',
       month: 'short',
@@ -413,603 +190,694 @@ export function AdminDashboard() {
     }).format(date);
   };
 
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // ElevenLabs API Functions
+  const saveElevenLabsApiKey = () => {
+    localStorage.setItem('elevenLabsApiKey', elevenLabsApiKey);
+    addLog('ElevenLabs Settings', 'API key updated');
+    alert('ElevenLabs API key saved successfully!');
+  };
+
+  const testElevenLabsConnection = async () => {
+    if (!elevenLabsApiKey) {
+      alert('Please enter your ElevenLabs API key first');
+      return;
+    }
+
+    setIsTestingConnection(true);
+    setConnectionStatus('idle');
+
+    try {
+      const response = await fetch('https://api.elevenlabs.io/v1/user', {
+        headers: {
+          'xi-api-key': elevenLabsApiKey,
+        },
+      });
+
+      if (response.ok) {
+        setConnectionStatus('success');
+        addLog('ElevenLabs Connection', 'Connection test successful');
+      } else {
+        setConnectionStatus('error');
+        addLog('ElevenLabs Connection', 'Connection test failed');
+      }
+    } catch (error) {
+      setConnectionStatus('error');
+      addLog('ElevenLabs Connection', 'Connection test failed with error');
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  // Voice Management Functions
+  const addVoice = () => {
+    if (!newVoice.name || !newVoice.nameJa) return;
+
+    const voice = {
+      id: Date.now().toString(),
+      ...newVoice,
+    };
+
+    const updatedVoices = [...voices, voice];
+    setVoices(updatedVoices);
+    localStorage.setItem('adminVoices', JSON.stringify(updatedVoices));
+    
+    setNewVoice({
+      name: '',
+      nameJa: '',
+      gender: 'female',
+      ageRange: '',
+      personality: '',
+      personalityJa: '',
+    });
+
+    addLog('Voice Management', `Added voice: ${voice.nameJa}`);
+  };
+
+  const deleteVoice = (id: string) => {
+    const updatedVoices = voices.filter(v => v.id !== id);
+    setVoices(updatedVoices);
+    localStorage.setItem('adminVoices', JSON.stringify(updatedVoices));
+    addLog('Voice Management', 'Deleted voice');
+  };
+
+  // Relationship Management Functions
+  const addRelationshipType = () => {
+    if (!newRelationship.label || !newRelationship.labelEn) return;
+
+    const relationship = {
+      id: Date.now().toString(),
+      ...newRelationship,
+    };
+
+    const updatedRelationships = [...relationshipTypes, relationship];
+    setRelationshipTypes(updatedRelationships);
+    localStorage.setItem('adminRelationships', JSON.stringify(updatedRelationships));
+    
+    setNewRelationship({ label: '', labelEn: '' });
+    addLog('Relationship Management', `Added relationship: ${relationship.label}`);
+  };
+
+  const deleteRelationshipType = (id: string) => {
+    const updatedRelationships = relationshipTypes.filter(r => r.id !== id);
+    setRelationshipTypes(updatedRelationships);
+    localStorage.setItem('adminRelationships', JSON.stringify(updatedRelationships));
+    addLog('Relationship Management', 'Deleted relationship type');
+  };
+
+  // Characteristics Management Functions
+  const addCharacteristic = () => {
+    if (!newCharacteristic.label || !newCharacteristic.labelEn) return;
+
+    const characteristic = {
+      id: Date.now().toString(),
+      ...newCharacteristic,
+    };
+
+    const updatedCharacteristics = [...characteristics, characteristic];
+    setCharacteristics(updatedCharacteristics);
+    localStorage.setItem('adminCharacteristics', JSON.stringify(updatedCharacteristics));
+    
+    setNewCharacteristic({ label: '', labelEn: '' });
+    addLog('Characteristics Management', `Added characteristic: ${characteristic.label}`);
+  };
+
+  const deleteCharacteristic = (id: string) => {
+    const updatedCharacteristics = characteristics.filter(c => c.id !== id);
+    setCharacteristics(updatedCharacteristics);
+    localStorage.setItem('adminCharacteristics', JSON.stringify(updatedCharacteristics));
+    addLog('Characteristics Management', 'Deleted characteristic');
+  };
+
+  // Demo Voice Management
+  const toggleDemoVoice = (voiceId: string) => {
+    const updatedDemoVoices = demoVoices.map(voice => 
+      voice.id === voiceId 
+        ? { ...voice, isSelected: !voice.isSelected }
+        : voice
+    );
+    setDemoVoices(updatedDemoVoices);
+    localStorage.setItem('demoVoices', JSON.stringify(updatedDemoVoices));
+    addLog('Demo Management', 'Updated demo voice selection');
+  };
+
+  const handleDemoAudioUpload = (voiceId: string, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const audioUrl = reader.result as string;
+      const updatedDemoVoices = demoVoices.map(voice => 
+        voice.id === voiceId 
+          ? { ...voice, audioUrl }
+          : voice
+      );
+      setDemoVoices(updatedDemoVoices);
+      localStorage.setItem('demoVoices', JSON.stringify(updatedDemoVoices));
+      addLog('Demo Management', `Uploaded audio for ${voices.find(v => v.id === voiceId)?.nameJa}`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Member Management Functions
+  const addMinutesToMember = () => {
+    if (!selectedMember || minutesToAdd <= 0) return;
+
+    const updatedMembers = members.map(member => 
+      member.id === selectedMember 
+        ? { 
+            ...member, 
+            minutesRemaining: member.minutesRemaining + minutesToAdd,
+            totalMinutesPurchased: member.totalMinutesPurchased + minutesToAdd
+          }
+        : member
+    );
+    
+    setMembers(updatedMembers);
+    localStorage.setItem('adminMembers', JSON.stringify(updatedMembers));
+    
+    const memberName = members.find(m => m.id === selectedMember)?.name;
+    addLog('Member Management', `Added ${minutesToAdd} minutes to ${memberName}`);
+    
+    setSelectedMember('');
+    setMinutesToAdd(0);
+    alert(`Successfully added ${minutesToAdd} minutes!`);
+  };
+
+  // Export functions
+  const exportCallLogs = () => {
+    const csvContent = [
+      ['Date', 'User', 'Partner', 'Agent ID', 'Duration', 'Minutes Used', 'Provider'].join(','),
+      ...callLogs.map(log => [
+        formatDate(log.timestamp),
+        log.userName,
+        log.partnerName,
+        log.agentId,
+        formatDuration(log.duration),
+        log.minutesUsed,
+        log.provider
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `call-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const tabs = [
-    { id: 'api', label: 'API設定', icon: Settings },
-    { id: 'members', label: 'メンバー管理', icon: Users },
-    { id: 'voices', label: '音声管理', icon: Mic },
-    { id: 'partners', label: '作成されたKokoro', icon: Heart },
-    { id: 'calls', label: '通話ログ', icon: Phone },
-    { id: 'logs', label: 'ログ', icon: Activity },
+    { id: 'elevenlabs', label: 'ElevenLabs Settings', icon: Settings },
+    { id: 'voices', label: 'Voice Management', icon: Volume2 },
+    { id: 'relationships', label: 'Relationships', icon: Users },
+    { id: 'characteristics', label: 'Characteristics', icon: Settings },
+    { id: 'demo', label: 'Demo Management', icon: Play },
+    { id: 'calls', label: 'Call Logs', icon: Phone },
+    { id: 'members', label: 'Member Management', icon: Users },
+    { id: 'partners', label: 'Created Partners', icon: Users },
+    { id: 'logs', label: 'System Logs', icon: Clock },
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 py-8">
       <div className="max-w-7xl mx-auto px-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">管理者ダッシュボード</h1>
-          <p className="text-gray-600">システム設定とユーザー管理</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <div className="flex items-center">
-              <Users className="w-8 h-8 text-blue-500" />
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">総メンバー数</p>
-                <p className="text-2xl font-bold text-gray-900">{members.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <div className="flex items-center">
-              <Mic className="w-8 h-8 text-green-500" />
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">登録音声数</p>
-                <p className="text-2xl font-bold text-gray-900">{voices.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <div className="flex items-center">
-              <Heart className="w-8 h-8 text-pink-500" />
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">作成されたKokoro</p>
-                <p className="text-2xl font-bold text-gray-900">{createdPartners.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <div className="flex items-center">
-              <Settings className="w-8 h-8 text-purple-500" />
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">API状態</p>
-                <p className={`text-sm font-medium ${apiKeyStatus === 'connected' ? 'text-green-600' : 'text-red-600'}`}>
-                  {apiKeyStatus === 'connected' ? '接続済み' : '未接続'}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl p-6 shadow-lg">
-            <div className="flex items-center">
-              <Activity className="w-8 h-8 text-orange-500" />
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">デモ音声</p>
-                <p className="text-2xl font-bold text-gray-900">{selectedDemoCount}/3</p>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900">管理パネル</h1>
+          <p className="text-gray-600 mt-2">システム設定と管理</p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white rounded-xl shadow-lg mb-8">
+        <div className="bg-white rounded-2xl shadow-lg mb-8">
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-6">
-              {tabs.map((tab) => (
+              {tabs.map(({ id, label, icon: Icon }) => (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-4 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === id
                       ? 'border-sky-500 text-sky-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <tab.icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
+                  <Icon className="w-4 h-4" />
+                  <span>{label}</span>
                 </button>
               ))}
             </nav>
           </div>
 
           <div className="p-6">
-            {/* API Settings Tab */}
-            {activeTab === 'api' && (
+            {/* ElevenLabs Settings Tab */}
+            {activeTab === 'elevenlabs' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900">Retell AI API設定</h2>
-                
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <p className="text-blue-800 text-sm">
-                    <strong>重要:</strong> Retell AI APIキーを設定すると、ユーザーが通話ボタンを押した時にリアルタイム音声通話が開始されます。
-                  </p>
-                </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Retell AI APIキー
-                  </label>
-                  <div className="flex space-x-3">
-                    <div className="flex-1 relative">
-                      <input
-                        type={showApiKey ? 'text' : 'password'}
-                        value={retellApiKey}
-                        onChange={(e) => setRetellApiKey(e.target.value)}
-                        placeholder="sk-..."
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showApiKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                    <button
-                      onClick={testApiKey}
-                      disabled={!retellApiKey.trim() || apiKeyStatus === 'testing'}
-                      className={`px-6 py-3 rounded-xl font-medium transition-all ${
-                        apiKeyStatus === 'testing'
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'bg-sky-500 hover:bg-sky-600 text-white'
-                      }`}
-                    >
-                      {apiKeyStatus === 'testing' ? 'テスト中...' : 'テスト'}
-                    </button>
-                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">ElevenLabs API Settings</h3>
                   
-                  <div className="mt-3 flex items-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${
-                      apiKeyStatus === 'connected' ? 'bg-green-500' : 
-                      apiKeyStatus === 'testing' ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}></div>
-                    <span className="text-sm text-gray-600">
-                      {apiKeyStatus === 'connected' ? 'API接続成功' : 
-                       apiKeyStatus === 'testing' ? 'API接続テスト中...' : 'API未接続'}
-                    </span>
-                  </div>
-                </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ElevenLabs API Key
+                      </label>
+                      <div className="flex space-x-3">
+                        <input
+                          type="password"
+                          value={elevenLabsApiKey}
+                          onChange={(e) => setElevenLabsApiKey(e.target.value)}
+                          placeholder="sk-..."
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                        />
+                        <button
+                          onClick={saveElevenLabsApiKey}
+                          className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
 
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">通話の仕組み</h3>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• ユーザーが「通話開始」ボタンを押すとRetell AIに接続</li>
-                    <li>• 選択された音声とキャラクター設定でリアルタイム会話</li>
-                    <li>• 全ての通話ログは自動的に記録されます</li>
-                    <li>• WebhookからAgent IDが返され、通話に使用されます</li>
-                  </ul>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={testElevenLabsConnection}
+                        disabled={isTestingConnection}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                          isTestingConnection
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-blue-500 hover:bg-blue-600'
+                        } text-white`}
+                      >
+                        {isTestingConnection ? 'Testing...' : 'Test Connection'}
+                      </button>
+                      
+                      {connectionStatus === 'success' && (
+                        <span className="text-green-600 text-sm">✓ Connection successful</span>
+                      )}
+                      {connectionStatus === 'error' && (
+                        <span className="text-red-600 text-sm">✗ Connection failed</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Members Tab */}
-            {activeTab === 'members' && (
+            {/* Voice Management Tab */}
+            {activeTab === 'voices' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-900">メンバー管理</h2>
-                  <button 
-                    onClick={() => setShowAddMember(true)}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Voice</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <input
+                      type="text"
+                      placeholder="English Name"
+                      value={newVoice.name}
+                      onChange={(e) => setNewVoice({ ...newVoice, name: e.target.value })}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Japanese Name"
+                      value={newVoice.nameJa}
+                      onChange={(e) => setNewVoice({ ...newVoice, nameJa: e.target.value })}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <select
+                      value={newVoice.gender}
+                      onChange={(e) => setNewVoice({ ...newVoice, gender: e.target.value as 'male' | 'female' })}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    >
+                      <option value="female">Female</option>
+                      <option value="male">Male</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Age Range (e.g., 20-25)"
+                      value={newVoice.ageRange}
+                      onChange={(e) => setNewVoice({ ...newVoice, ageRange: e.target.value })}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Personality (English)"
+                      value={newVoice.personality}
+                      onChange={(e) => setNewVoice({ ...newVoice, personality: e.target.value })}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Personality (Japanese)"
+                      value={newVoice.personalityJa}
+                      onChange={(e) => setNewVoice({ ...newVoice, personalityJa: e.target.value })}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                  </div>
+                  <button
+                    onClick={addVoice}
                     className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
                   >
-                    <Plus className="w-4 h-4 mr-2 inline" />
-                    新規メンバー追加
+                    <Plus className="w-4 h-4 inline mr-2" />
+                    Add Voice
                   </button>
                 </div>
 
-                {/* Add Member Modal */}
-                {showAddMember && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">新規メンバー追加</h3>
-                      <button onClick={() => setShowAddMember(false)}>
-                        <X className="w-5 h-5 text-gray-400" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        placeholder="名前"
-                        value={newMember.name}
-                        onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      />
-                      <input
-                        type="email"
-                        placeholder="メールアドレス"
-                        value={newMember.email}
-                        onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      />
-                      <input
-                        type="password"
-                        placeholder="パスワード"
-                        value={newMember.password}
-                        onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      />
-                      <select
-                        value={newMember.role}
-                        onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      >
-                        <option value="user">ユーザー</option>
-                        <option value="admin">管理者</option>
-                      </select>
-                    </div>
-                    <div className="flex justify-end space-x-3 mt-4">
-                      <button
-                        onClick={() => setShowAddMember(false)}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                      >
-                        キャンセル
-                      </button>
-                      <button
-                        onClick={addMember}
-                        className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
-                      >
-                        追加
-                      </button>
-                    </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Existing Voices</h3>
+                  <div className="space-y-3">
+                    {voices.map((voice) => (
+                      <div key={voice.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{voice.nameJa} ({voice.name})</h4>
+                          <p className="text-sm text-gray-600">
+                            {voice.personalityJa} • {voice.ageRange}歳 • {voice.gender === 'female' ? '女性' : '男性'}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <VoicePreview
+                            voiceId={voice.id}
+                            voiceName={voice.nameJa}
+                          />
+                          <button
+                            onClick={() => deleteVoice(voice.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              </div>
+            )}
 
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            {/* Relationships Tab */}
+            {activeTab === 'relationships' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Relationship Type</h3>
+                  <div className="flex space-x-3 mb-4">
+                    <input
+                      type="text"
+                      placeholder="Japanese Label"
+                      value={newRelationship.label}
+                      onChange={(e) => setNewRelationship({ ...newRelationship, label: e.target.value })}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <input
+                      type="text"
+                      placeholder="English Label"
+                      value={newRelationship.labelEn}
+                      onChange={(e) => setNewRelationship({ ...newRelationship, labelEn: e.target.value })}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={addRelationshipType}
+                      className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Existing Relationship Types</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {relationshipTypes.map((relationship) => (
+                      <div key={relationship.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <span className="font-medium text-gray-900">{relationship.label}</span>
+                          <span className="text-sm text-gray-600 ml-2">({relationship.labelEn})</span>
+                        </div>
+                        <button
+                          onClick={() => deleteRelationshipType(relationship.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Characteristics Tab */}
+            {activeTab === 'characteristics' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Characteristic</h3>
+                  <div className="flex space-x-3 mb-4">
+                    <input
+                      type="text"
+                      placeholder="Japanese Label"
+                      value={newCharacteristic.label}
+                      onChange={(e) => setNewCharacteristic({ ...newCharacteristic, label: e.target.value })}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <input
+                      type="text"
+                      placeholder="English Label"
+                      value={newCharacteristic.labelEn}
+                      onChange={(e) => setNewCharacteristic({ ...newCharacteristic, labelEn: e.target.value })}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={addCharacteristic}
+                      className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Existing Characteristics</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {characteristics.map((characteristic) => (
+                      <div key={characteristic.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <span className="font-medium text-gray-900">{characteristic.label}</span>
+                          <span className="text-sm text-gray-600 block">({characteristic.labelEn})</span>
+                        </div>
+                        <button
+                          onClick={() => deleteCharacteristic(characteristic.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Demo Management Tab */}
+            {activeTab === 'demo' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Demo Voice Management</h3>
+                  <p className="text-gray-600 mb-6">
+                    Select voices to show in the landing page demo section and upload audio samples.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    {voices.map((voice) => {
+                      const demoVoice = demoVoices.find(dv => dv.id === voice.id) || { ...voice, isSelected: false };
+                      return (
+                        <div key={voice.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <input
+                              type="checkbox"
+                              checked={demoVoice.isSelected || false}
+                              onChange={() => toggleDemoVoice(voice.id)}
+                              className="w-4 h-4 text-sky-600 border-gray-300 rounded focus:ring-sky-500"
+                            />
+                            <div>
+                              <h4 className="font-medium text-gray-900">{voice.nameJa}</h4>
+                              <p className="text-sm text-gray-600">{voice.personalityJa}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-3">
+                            <VoicePreview
+                              voiceId={voice.id}
+                              voiceName={voice.nameJa}
+                              onAudioUpload={handleDemoAudioUpload}
+                            />
+                            {demoVoice.audioUrl && (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Call Logs Tab */}
+            {activeTab === 'calls' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-gray-900">Call Logs</h3>
+                  <button
+                    onClick={exportCallLogs}
+                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+                
+                <div className="bg-white rounded-lg border overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">役割</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">登録日</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最終ログイン</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kokoro数</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent ID</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minutes Used</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {members.map((member) => (
-                          <tr key={member.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                                <div className="text-sm text-gray-500">{member.email}</div>
-                              </div>
+                        {callLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatDate(log.timestamp)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                member.role === 'admin' 
-                                  ? 'bg-purple-100 text-purple-800' 
-                                  : 'bg-green-100 text-green-800'
-                              }`}>
-                                {member.role === 'admin' ? '管理者' : 'ユーザー'}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {log.userName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {log.partnerName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
+                              {log.agentId}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatDuration(log.duration)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {log.minutesUsed}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                {log.provider}
                               </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatDate(member.createdAt)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {member.lastLogin ? formatDate(member.lastLogin) : '未ログイン'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {member.partnersCount}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex space-x-2">
-                                <button className="text-sky-600 hover:text-sky-900">
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                {member.id !== user?.id && (
-                                  <button 
-                                    onClick={() => deleteMember(member.id)}
-                                    className="text-red-600 hover:text-red-900"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                  
+                  {callLogs.length === 0 && (
+                    <div className="text-center py-12">
+                      <Phone className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No call logs yet</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Voices Tab */}
-            {activeTab === 'voices' && (
+            {/* Member Management Tab */}
+            {activeTab === 'members' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-900">音声管理</h2>
-                  <button 
-                    onClick={() => setShowAddVoice(true)}
-                    className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
-                  >
-                    <Plus className="w-4 h-4 mr-2 inline" />
-                    新しい音声追加
-                  </button>
-                </div>
-
-                {/* Demo Voice Section */}
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    音声デモ管理 ({selectedDemoCount}/3選択中)
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    ランディングページの「会話デモ」セクションに表示される音声を管理します。最大3つまで選択可能です。
-                  </p>
-                  
-                  <div className="mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Minutes to Member</h3>
+                  <div className="flex space-x-3 mb-6">
+                    <select
+                      value={selectedMember}
+                      onChange={(e) => setSelectedMember(e.target.value)}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    >
+                      <option value="">Select Member</option>
+                      {members.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name} ({member.email}) - {member.minutesRemaining} minutes remaining
+                        </option>
+                      ))}
+                    </select>
                     <input
-                      type="file"
-                      accept="audio/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleDemoVoiceUpload(file);
-                      }}
-                      className="hidden"
-                      id="demo-voice-upload"
+                      type="number"
+                      placeholder="Minutes to add"
+                      value={minutesToAdd || ''}
+                      onChange={(e) => setMinutesToAdd(parseInt(e.target.value) || 0)}
+                      className="w-40 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                     />
-                    <label
-                      htmlFor="demo-voice-upload"
-                      className="inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg cursor-pointer transition-colors"
+                    <button
+                      onClick={addMinutesToMember}
+                      disabled={!selectedMember || minutesToAdd <= 0}
+                      className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      デモ音声をアップロード
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {demoVoices.map((voice) => (
-                      <div key={voice.id} className={`border rounded-lg p-4 ${voice.isSelected ? 'border-sky-500 bg-sky-50' : 'border-gray-200'}`}>
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-gray-900">{voice.name}</h4>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => toggleDemoVoiceSelection(voice.id)}
-                              className={`px-3 py-1 text-xs rounded-full font-medium ${
-                                voice.isSelected 
-                                  ? 'bg-sky-500 text-white' 
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
-                            >
-                              {voice.isSelected ? '選択中' : '選択'}
-                            </button>
-                            <button
-                              onClick={() => deleteDemoVoice(voice.id)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                        <audio controls className="w-full">
-                          <source src={voice.audioUrl} />
-                        </audio>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Add Voice Form */}
-                {showAddVoice && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">新しい音声追加</h3>
-                      <button onClick={() => setShowAddVoice(false)}>
-                        <X className="w-5 h-5 text-gray-400" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        placeholder="英語名 (例: Yuki)"
-                        value={newVoice.name}
-                        onChange={(e) => setNewVoice({ ...newVoice, name: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder="日本語名 (例: ユキ)"
-                        value={newVoice.nameJa}
-                        onChange={(e) => setNewVoice({ ...newVoice, nameJa: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder="年齢範囲 (例: 22-26)"
-                        value={newVoice.ageRange}
-                        onChange={(e) => setNewVoice({ ...newVoice, ageRange: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      />
-                      <select
-                        value={newVoice.gender}
-                        onChange={(e) => setNewVoice({ ...newVoice, gender: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      >
-                        <option value="female">女性</option>
-                        <option value="male">男性</option>
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="性格 (英語)"
-                        value={newVoice.personality}
-                        onChange={(e) => setNewVoice({ ...newVoice, personality: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder="性格 (日本語)"
-                        value={newVoice.personalityJa}
-                        onChange={(e) => setNewVoice({ ...newVoice, personalityJa: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-3 mt-4">
-                      <button
-                        onClick={() => setShowAddVoice(false)}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                      >
-                        キャンセル
-                      </button>
-                      <button
-                        onClick={addVoice}
-                        className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
-                      >
-                        追加
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Voice List */}
-                <div className="space-y-4">
-                  {voices.map((voice) => (
-                    <div key={voice.id} className="bg-white rounded-xl p-6 shadow-lg">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {voice.nameJa} ({voice.name})
-                          </h3>
-                          <p className="text-gray-600 mb-2">{voice.personalityJa}</p>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <span>{voice.ageRange}歳</span>
-                            <span>{voice.gender === 'female' ? '女性' : '男性'}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3">
-                          <VoicePreview voiceId={voice.id} voiceName={voice.nameJa} />
-                          <button
-                            onClick={() => deleteVoice(voice.id)}
-                            className="p-2 text-red-400 hover:text-red-600 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Relationship Types Management */}
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">関係性タイプ管理</h3>
-                    <button 
-                      onClick={() => setShowAddRelation(true)}
-                      className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                    >
-                      <Plus className="w-4 h-4 mr-2 inline" />
-                      関係性追加
+                      Add Minutes
                     </button>
                   </div>
-
-                  {showAddRelation && (
-                    <div className="mb-4 p-4 border border-gray-200 rounded-lg">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          type="text"
-                          placeholder="日本語 (例: 友達)"
-                          value={newRelation.label}
-                          onChange={(e) => setNewRelation({ ...newRelation, label: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="英語 (例: Friend)"
-                          value={newRelation.labelEn}
-                          onChange={(e) => setNewRelation({ ...newRelation, labelEn: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-3 mt-3">
-                        <button
-                          onClick={() => setShowAddRelation(false)}
-                          className="px-3 py-1 text-gray-600 hover:text-gray-800 transition-colors"
-                        >
-                          キャンセル
-                        </button>
-                        <button
-                          onClick={addRelationship}
-                          className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                        >
-                          追加
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {relationshipTypes.map((relation) => (
-                      <div key={relation.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <span className="text-sm font-medium">{relation.label}</span>
-                        <button 
-                          onClick={() => deleteRelationship(relation.id)}
-                          className="text-red-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
-                {/* Characteristics Management */}
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">特徴管理</h3>
-                    <button 
-                      onClick={() => setShowAddCharacteristic(true)}
-                      className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-                    >
-                      <Plus className="w-4 h-4 mr-2 inline" />
-                      特徴追加
-                    </button>
-                  </div>
-
-                  {showAddCharacteristic && (
-                    <div className="mb-4 p-4 border border-gray-200 rounded-lg">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          type="text"
-                          placeholder="日本語 (例: 優しい)"
-                          value={newCharacteristic.label}
-                          onChange={(e) => setNewCharacteristic({ ...newCharacteristic, label: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                        />
-                        <input
-                          type="text"
-                          placeholder="英語 (例: Gentle)"
-                          value={newCharacteristic.labelEn}
-                          onChange={(e) => setNewCharacteristic({ ...newCharacteristic, labelEn: e.target.value })}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-3 mt-3">
-                        <button
-                          onClick={() => setShowAddCharacteristic(false)}
-                          className="px-3 py-1 text-gray-600 hover:text-gray-800 transition-colors"
-                        >
-                          キャンセル
-                        </button>
-                        <button
-                          onClick={addCharacteristic}
-                          className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-                        >
-                          追加
-                        </button>
-                      </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">All Members</h3>
+                  <div className="bg-white rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minutes Remaining</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Purchased</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minutes Used</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {members.map((member) => (
+                            <tr key={member.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {member.name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {member.email}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  member.role === 'admin' 
+                                    ? 'bg-purple-100 text-purple-800' 
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {member.role}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {member.minutesRemaining}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {member.totalMinutesPurchased}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {member.minutesUsed}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatDate(member.createdAt)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {characteristics.map((char) => (
-                      <div key={char.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <span className="text-sm font-medium">{char.label}</span>
-                        <button 
-                          onClick={() => deleteCharacteristic(char.id)}
-                          className="text-red-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>
@@ -1018,163 +886,70 @@ export function AdminDashboard() {
             {/* Created Partners Tab */}
             {activeTab === 'partners' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900">作成されたKokoro</h2>
+                <h3 className="text-lg font-semibold text-gray-900">Created Partners</h3>
                 
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kokoro</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作成者</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">関係性</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent ID</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作成日</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {createdPartners.map((partner) => (
-                          <tr key={partner.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <img className="h-10 w-10 rounded-full object-cover" src={partner.imageUrl || '/api/placeholder/40/40'} alt="" />
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">{partner.name}</div>
-                                  <div className="text-sm text-gray-500">呼び名: {partner.userCallName}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {partner.userName}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {partner.relationshipType}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                {partner.agentId || 'N/A'}
-                              </code>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatDate(new Date(partner.createdAt))}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="grid gap-6">
+                  {createdPartners.map((partner) => (
+                    <div key={partner.id} className="bg-white p-6 rounded-lg border">
+                      <div className="flex items-start space-x-4">
+                        <img
+                          src={partner.imageUrl}
+                          alt={partner.name}
+                          className="w-16 h-16 rounded-full object-cover"
+                        />
+                        <div className="flex-1">
+                          <h4 className="text-lg font-semibold text-gray-900">{partner.name}</h4>
+                          <p className="text-sm text-gray-600 mb-2">Created by: {partner.userName}</p>
+                          <p className="text-sm text-gray-600 mb-2">Agent ID: <code className="bg-gray-100 px-2 py-1 rounded">{partner.agentId || 'N/A'}</code></p>
+                          <p className="text-sm text-gray-600 mb-2">Relationship: {partner.relationshipType}</p>
+                          <p className="text-sm text-gray-600 mb-2">Characteristics: {partner.characteristics}</p>
+                          <p className="text-sm text-gray-500">Created: {formatDate(partner.createdAt)}</p>
+                          {partner.lastTalkedAt && (
+                            <p className="text-sm text-gray-500">Last talked: {formatDate(partner.lastTalkedAt)}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {createdPartners.length === 0 && (
+                    <div className="text-center py-12">
+                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No partners created yet</p>
+                    </div>
+                  )}
                 </div>
-
-                {createdPartners.length === 0 && (
-                  <div className="text-center py-12">
-                    <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">まだKokoroが作成されていません</p>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* Call Logs Tab */}
-            {activeTab === 'calls' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900">通話ログ</h2>
-                
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">時刻</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kokoro</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">通話時間</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {callLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatDate(log.timestamp)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {log.userName}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {log.partnerName}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {log.duration}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                log.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                log.status === 'failed' ? 'bg-red-100 text-red-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {log.status === 'completed' ? '完了' :
-                                 log.status === 'failed' ? '失敗' : '進行中'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {callLogs.length === 0 && (
-                  <div className="text-center py-12">
-                    <Phone className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">まだ通話ログがありません</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Logs Tab */}
+            {/* System Logs Tab */}
             {activeTab === 'logs' && (
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900">システムログ</h2>
+                <h3 className="text-lg font-semibold text-gray-900">System Logs</h3>
                 
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">時刻</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">アクション</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">詳細</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {logs.map((log) => (
-                          <tr key={log.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatDate(log.timestamp)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {log.userName}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                log.action === 'Partner Created' ? 'bg-green-100 text-green-800' :
-                                log.action === 'Voice Call' ? 'bg-blue-100 text-blue-800' :
-                                log.action === 'Admin Login' ? 'bg-purple-100 text-purple-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {log.action}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">
-                              {log.details}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <div className="bg-white rounded-lg border overflow-hidden">
+                  <div className="max-h-96 overflow-y-auto">
+                    {logs.map((log) => (
+                      <div key={log.id} className="px-6 py-4 border-b border-gray-200 last:border-b-0">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-gray-900">{log.action}</p>
+                            <p className="text-sm text-gray-600">{log.details}</p>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {formatDate(log.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                  
+                  {logs.length === 0 && (
+                    <div className="text-center py-12">
+                      <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No system logs yet</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

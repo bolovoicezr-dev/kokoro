@@ -7,7 +7,7 @@ import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
 import { CreatePartner } from './components/CreatePartner';
 import { PhoneCall } from './components/PhoneCall';
-import { AdminDashboard } from './components/AdminDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { ProtectedRoute } from './components/ProtectedRoute';

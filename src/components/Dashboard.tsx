@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Clock, MessageCircle, Heart } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { getRelationshipTypes } from '../data/voices';
 
 export function Dashboard() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const relationshipTypes = getRelationshipTypes();
 
   const formatDate = (date: Date) => {

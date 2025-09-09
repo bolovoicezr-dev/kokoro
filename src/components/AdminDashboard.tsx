@@ -13,7 +13,9 @@ import {
   Key,
   Activity,
   Heart,
-  Volume2
+  Volume2,
+  Play,
+  Pause
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { VoicePreview } from './VoicePreview';
@@ -64,6 +66,9 @@ export default function AdminDashboard() {
   const [callLogs, setCallLogs] = useState<CallLog[]>([]);
   const [createdPartners, setCreatedPartners] = useState<any[]>([]);
   const [demoVoices, setDemoVoices] = useState<any[]>([]);
+  
+  // Audio preview state
+  const [currentPlayingVoice, setCurrentPlayingVoice] = useState<string | null>(null);
   
   // Form states
   const [editingVoice, setEditingVoice] = useState<Voice | null>(null);
@@ -238,6 +243,44 @@ export default function AdminDashboard() {
     localStorage.setItem('demoVoices', JSON.stringify(updatedDemoVoices));
   };
 
+  // Voice file upload and preview functions
+  const handleVoiceFileUpload = (voiceId: string, file: File | undefined) => {
+    if (file && file.type.startsWith('audio/')) {
+      const url = URL.createObjectURL(file);
+      localStorage.setItem(`voice-preview-${voiceId}`, url);
+      
+      // Also store the file data for persistence
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          localStorage.setItem(`voice-file-${voiceId}`, reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getVoicePreviewUrl = (voiceId: string) => {
+    return localStorage.getItem(`voice-preview-${voiceId}`) || localStorage.getItem(`voice-file-${voiceId}`);
+  };
+
+  const toggleVoicePreview = (voiceId: string) => {
+    const audio = document.getElementById(`voice-preview-${voiceId}`) as HTMLAudioElement;
+    if (!audio) return;
+
+    if (currentPlayingVoice === voiceId) {
+      audio.pause();
+      setCurrentPlayingVoice(null);
+    } else {
+      // Pause any currently playing audio
+      if (currentPlayingVoice) {
+        const currentAudio = document.getElementById(`voice-preview-${currentPlayingVoice}`) as HTMLAudioElement;
+        if (currentAudio) currentAudio.pause();
+      }
+      audio.play();
+      setCurrentPlayingVoice(voiceId);
+    }
+  };
   if (!user || user.role !== 'admin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50 flex items-center justify-center">
@@ -403,6 +446,50 @@ export default function AdminDashboard() {
                             className="px-3 py-2 border border-gray-300 rounded-lg"
                           />
                         </div>
+                        
+                        {/* Voice File Upload Section */}
+                        <div className="border-t pt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            音声ファイル
+                          </label>
+                          <div className="space-y-3">
+                            <input
+                              type="file"
+                              accept="audio/*"
+                              onChange={(e) => handleVoiceFileUpload(editingVoice.id, e.target.files?.[0])}
+                              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                            />
+                            {getVoicePreviewUrl(editingVoice.id) && (
+                              <div className="flex items-center space-x-3 p-3 bg-sky-50 rounded-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleVoicePreview(editingVoice.id)}
+                                  className="flex items-center space-x-2 px-3 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+                                >
+                                  {currentPlayingVoice === editingVoice.id ? (
+                                    <>
+                                      <Pause className="w-4 h-4" />
+                                      <span>停止</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="w-4 h-4" />
+                                      <span>再生</span>
+                                    </>
+                                  )}
+                                </button>
+                                <span className="text-sm text-sky-700">音声プレビュー準備完了</span>
+                                <audio
+                                  id={`voice-preview-${editingVoice.id}`}
+                                  src={getVoicePreviewUrl(editingVoice.id)}
+                                  onEnded={() => setCurrentPlayingVoice(null)}
+                                  onPause={() => setCurrentPlayingVoice(null)}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
                         <div className="flex space-x-2">
                           <button
                             onClick={() => updateVoice(editingVoice)}

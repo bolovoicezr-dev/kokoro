@@ -251,7 +251,7 @@ export function LandingPage() {
                 最先端AI技術
               </h3>
               <p className="text-gray-600">
-                Retell AIによる自然で人間らしい会話体験
+                最新の音声AI技術による自然で人間らしい会話体験
               </p>
             </div>
             

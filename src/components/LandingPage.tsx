@@ -40,6 +40,12 @@ export function LandingPage() {
   const toggleAudio = (voiceId: string) => {
     const audio = document.getElementById(`demo-audio-${voiceId}`) as HTMLAudioElement;
     if (!audio) return;
+    
+    // Check if audio source exists
+    if (!audio.src) {
+      console.warn('No audio source available for voice:', voiceId);
+      return;
+    }
 
     if (currentPlaying === voiceId) {
       audio.pause();
@@ -50,7 +56,10 @@ export function LandingPage() {
         const currentAudio = document.getElementById(`demo-audio-${currentPlaying}`) as HTMLAudioElement;
         if (currentAudio) currentAudio.pause();
       }
-      audio.play();
+      audio.play().catch(error => {
+        console.error('Error playing audio:', error);
+        setCurrentPlaying(null);
+      });
       setCurrentPlaying(voiceId);
     }
   };
@@ -127,6 +136,8 @@ export function LandingPage() {
                           <p className="text-sm text-gray-600">音声サンプル</p>
                         </div>
                         <div className="flex items-center space-x-3">
+                          {/* Check if audio URL exists */}
+                          {(voice.audioUrl || localStorage.getItem(`voice-preview-${voice.id}`) || localStorage.getItem(`voice-file-${voice.id}`)) ? (
                           <button
                             onClick={() => toggleAudio(voice.id)}
                             className="p-3 bg-sky-500 hover:bg-sky-600 text-white rounded-full transition-colors"
@@ -137,18 +148,27 @@ export function LandingPage() {
                               <Play className="w-5 h-5" />
                             )}
                           </button>
+                          ) : (
+                            <div className="p-3 bg-gray-300 text-gray-500 rounded-full cursor-not-allowed">
+                              <Play className="w-5 h-5" />
+                            </div>
+                          )}
                           <audio
                             id={`demo-audio-${voice.id}`}
-                            src={voice.audioUrl}
+                            src={voice.audioUrl || localStorage.getItem(`voice-preview-${voice.id}`) || localStorage.getItem(`voice-file-${voice.id}`) || ''}
                             onEnded={() => setCurrentPlaying(null)}
                             onPause={() => setCurrentPlaying(null)}
+                            preload="metadata"
                           />
                         </div>
                       </div>
                     ))}
                     <div className="text-center mt-6">
                       <p className="text-sm text-sky-700">
-                        リアルな音声でまるで本当の人と話しているような体験をお楽しみください
+                        {demoVoices.some(voice => voice.audioUrl || localStorage.getItem(`voice-preview-${voice.id}`) || localStorage.getItem(`voice-file-${voice.id}`)) 
+                          ? 'リアルな音声でまるで本当の人と話しているような体験をお楽しみください'
+                          : '管理者が音声ファイルをアップロードすると、ここで試聴できます'
+                        }
                       </p>
                     </div>
                   </div>
@@ -156,11 +176,11 @@ export function LandingPage() {
                   <div className="text-center py-12">
                     <Heart className="w-16 h-16 text-sky-400 mx-auto mb-4" />
                     <p className="text-gray-600 mb-6">
-                      管理者が音声デモを追加すると、ここに表示されます
+                      管理者が音声を追加してデモ表示を有効にすると、ここに表示されます
                     </p>
                     <div className="bg-sky-50 rounded-xl p-4">
                       <p className="text-sm text-sky-700">
-                        リアルな音声でまるで本当の人と話しているような体験をお楽しみください
+                        音声ファイルがアップロードされると、リアルな音声体験をお楽しみいただけます
                       </p>
                     </div>
                   </div>
